@@ -1,0 +1,48 @@
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.6rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.lbl {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 6.5rem 1fr 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .fieldRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.cell {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+  min-inline-size: 0;
+}

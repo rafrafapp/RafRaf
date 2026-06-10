@@ -1,0 +1,355 @@
+.main {
+  /* dark-glass palette + app-var remap (admin surface) */
+  --primary: #4edea3;
+  --primary-container: #10b981;
+  --on-primary-container: #00422b;
+  --secondary: #ffb95f;
+  --error: #ffb4ab;
+  --sc-low: #131b2e;
+  --sc: #171f33;
+  --glass: rgba(30, 41, 59, 0.7);
+
+  --bg: #0b1326;
+  --surface: #171f33;
+  --text: #dae2fd;
+  --text-muted: #bbcabf;
+  --border: #3c4a42;
+  --brand: #4edea3;
+  --brand-contrast: #00422b;
+
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-inline: clamp(1rem, 5vw, 3rem);
+  padding-block: 1.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.logo {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.tag {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.backLink {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  text-decoration: none;
+}
+.backLink:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.nav {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+}
+
+.navLink {
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+.navLink:hover {
+  border-color: var(--border);
+}
+.navActive {
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+}
+.subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* metric grid */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.85rem;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+.cardLabel {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.cardValue {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.sectionTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* tables */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  min-width: 36rem;
+}
+.table th,
+.table td {
+  text-align: start;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.table th {
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+.table tbody tr:hover td {
+  background: color-mix(in srgb, var(--brand) 6%, transparent);
+}
+
+.rowLink {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+.rowLink:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+/* pills / badges */
+.pill {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+}
+.pillOk {
+  color: #8fe3bb;
+  border-color: rgba(78, 222, 163, 0.35);
+  background: rgba(78, 222, 163, 0.12);
+}
+.pillBad {
+  color: var(--error);
+  border-color: rgba(255, 180, 171, 0.35);
+  background: rgba(255, 180, 171, 0.12);
+}
+.pillWarn {
+  color: var(--secondary);
+  border-color: rgba(255, 185, 95, 0.35);
+  background: rgba(255, 185, 95, 0.12);
+}
+
+.dot {
+  display: inline-block;
+  inline-size: 0.7rem;
+  block-size: 0.7rem;
+  border-radius: 50%;
+  margin-inline-end: 0.4rem;
+  vertical-align: middle;
+}
+.dotOk {
+  background: var(--primary);
+}
+.dotBad {
+  background: var(--error);
+}
+
+/* controls */
+.controlRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.select,
+.input,
+.textarea {
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--text);
+}
+.textarea {
+  width: 100%;
+  max-width: 40rem;
+  min-height: 6rem;
+  resize: vertical;
+}
+.input {
+  width: 100%;
+  max-width: 22rem;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.btnPrimary {
+  background: var(--brand);
+  color: var(--brand-contrast);
+  border-color: var(--brand);
+}
+.btnPrimary:hover:not(:disabled) {
+  opacity: 0.92;
+  color: var(--brand-contrast);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.status {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.statusOk {
+  color: #8fe3bb;
+}
+.statusBad {
+  color: var(--error);
+}
+
+/* impersonation banner */
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: rgba(255, 185, 95, 0.12);
+  border: 1px solid rgba(255, 185, 95, 0.35);
+  color: var(--text);
+  border-radius: 0.6rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.detailRow:last-child {
+  border-bottom: none;
+}
+.detailLabel {
+  color: var(--text-muted);
+}

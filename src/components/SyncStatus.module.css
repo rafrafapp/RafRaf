@@ -1,0 +1,47 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: none;
+}
+
+.synced .dot {
+  background: #2e9e6b;
+}
+
+.pending .dot {
+  background: #c98a1b;
+}
+
+.syncing .dot {
+  background: #c98a1b;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.offline .dot {
+  background: #b04a3f;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}

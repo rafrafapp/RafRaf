@@ -1,0 +1,51 @@
+:root {
+  /* Brand */
+  --brand: #0e7c66;
+  --brand-contrast: #ffffff;
+
+  /* Surfaces & text */
+  --bg: #f7f8f7;
+  --surface: #ffffff;
+  --text: #15201c;
+  --text-muted: #5b6b65;
+  --border: #e2e8e5;
+
+  /* Type */
+  --font-sans: "Segoe UI", "Tahoma", "Noto Sans Arabic", "Cairo", system-ui,
+    -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1411;
+    --surface: #15201c;
+    --text: #eef3f1;
+    --text-muted: #9bb0a8;
+    --border: #243530;
+    --brand-contrast: #ffffff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Logical properties keep layout correct in both RTL (Arabic) and LTR. */
+a {
+  color: var(--brand);
+}

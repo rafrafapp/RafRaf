@@ -1,0 +1,21 @@
+{
+  "name": "رف رف — RafRaf",
+  "short_name": "رف رف",
+  "description": "نظام جرد ذكي وآمن يعمل بدون إنترنت — بديل الدفتر والإكسل.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f8f7",
+  "theme_color": "#0e7c66",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

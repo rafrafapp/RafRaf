@@ -1,0 +1,188 @@
+/* Phase 6 — reports. Reuses transactions.module.css for the page chrome
+   (.main/.header/.title/.stat/.chip/etc.); these are report-specific. */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.customRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dateField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.dateInput {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.exportRow {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.grid {
+  display: grid;
+  /* mobile: exactly 2 columns */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+/* desktop: stretch the cards to fill the (now wider) report width */
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  }
+}
+
+/* Emphasis variants for the headline figures. The colour is set on the card so
+   the (colourless) .statValue inherits it; the muted .statLabel keeps its own.
+   (Targeting .statValue directly fails — it's hashed to the transactions sheet.) */
+.statGood {
+  color: #8fe3bb;
+}
+.statBad {
+  color: var(--error);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-inline-start: 3px solid var(--primary);
+  padding-inline-start: 0.55rem;
+}
+
+.snapshotNote {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Sales-trend column chart — pure CSS. */
+.chart {
+  display: flex;
+  align-items: stretch;
+  gap: 0.3rem;
+  block-size: 12rem;
+  padding: 0.85rem 0.75rem 0.6rem;
+  background: var(--sc-low);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  overflow-x: auto;
+}
+.col {
+  flex: 1 1 0;
+  min-inline-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+.colTrack {
+  flex: 1;
+  inline-size: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.colBar {
+  inline-size: 100%;
+  max-inline-size: 2.4rem;
+  min-block-size: 3px;
+  border-radius: 0.35rem 0.35rem 0 0;
+  background: linear-gradient(to top, var(--primary-container), var(--primary));
+  transition: filter 0.15s;
+}
+.colBar:hover {
+  filter: brightness(1.18);
+}
+/* the peak day pops in amber */
+.colBarMax {
+  background: linear-gradient(to top, #d98a1f, var(--secondary));
+}
+.colDay {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ranked rows (sellers, expenses, suppliers, debtors, low stock). */
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rowItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+a.rowItem:hover {
+  border-color: var(--brand);
+}
+
+.rowName {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.rowValue {
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 32rem) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,140 @@
+/* Developer landing — extends landing.module.css (palette vars live on .root,
+   provided by the marketing layout). Only the API-specific bits live here. */
+
+.hero {
+  padding-block: 7rem 3rem;
+  padding-inline: 32px;
+  position: relative;
+  overflow: hidden;
+}
+.heroGlow {
+  position: absolute;
+  inset-block-start: 10%;
+  inset-inline-start: -20%;
+  inline-size: 480px;
+  block-size: 480px;
+  background: rgba(78, 222, 163, 0.1);
+  filter: blur(120px);
+  z-index: -10;
+}
+
+/* auth + scopes cards */
+.authGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-block-start: 2.5rem;
+}
+.authCard {
+  padding: 2rem;
+  border-radius: 1.25rem;
+}
+.authCardTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin: 0 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.authCardText {
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--on-surface-variant);
+  margin: 0;
+}
+
+/* endpoints table */
+.tableWrap {
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--outline-variant);
+}
+.scroll {
+  overflow-x: auto;
+}
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.table th {
+  text-align: start;
+  padding: 0.85rem 1.1rem;
+  color: var(--on-surface-variant);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-block-end: 1px solid var(--outline-variant);
+  background: var(--sc-low);
+  white-space: nowrap;
+}
+.table td {
+  padding: 0.8rem 1.1rem;
+  border-block-end: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+  vertical-align: top;
+}
+.table tr:last-child td {
+  border-block-end: none;
+}
+.method {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--primary);
+  white-space: nowrap;
+  font-size: 0.84rem;
+}
+.scope {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--secondary);
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+.note {
+  color: var(--on-surface-variant);
+  min-inline-size: 14rem;
+}
+
+.errorsCard {
+  margin-block-start: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 1.25rem;
+}
+.errorsText {
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--on-surface-variant);
+  margin: 0 0 0.5rem;
+}
+
+/* code block: comments coloured, rest inherits the green codePre */
+.curlComment {
+  color: var(--on-surface-variant);
+}
+
+/* per-plan API rate-limit highlight inside the pricing card */
+.rateRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-block: 0.25rem 1rem;
+  padding-block: 0.75rem;
+  border-block: 1px solid var(--outline-variant);
+}
+.rateBig {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+.rateUnit {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+}
+
+@media (min-width: 768px) {
+  .authGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

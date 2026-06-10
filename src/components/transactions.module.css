@@ -1,0 +1,950 @@
+/* Shared styles for all transaction screens — dark-glass design system.
+   The whole sheet is built on the app theme vars (--brand/--surface/--text/…),
+   so re-mapping them on .main dark-themes every screen + shared component
+   (ProductPicker, PartyPicker, Receipt, SyncBadge) that renders inside it. */
+
+.main {
+  /* dark-glass palette + app-var remap */
+  --primary: #4edea3;
+  --primary-container: #10b981;
+  --on-primary-container: #00422b;
+  --secondary: #ffb95f;
+  --error: #ffb4ab;
+  --sc-low: #131b2e;
+  --sc: #171f33;
+  --sc-high: #222a3d;
+  --glass: rgba(30, 41, 59, 0.7);
+
+  --bg: #0b1326;
+  --surface: #171f33;
+  --text: #dae2fd;
+  --text-muted: #bbcabf;
+  --border: #3c4a42;
+  --brand: #4edea3;
+  --brand-contrast: #00422b;
+
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 5vw, 3rem);
+  padding-block: 1.5rem 3rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+/* full-viewport dark backdrop so the centered column has no light gutters on
+   desktop (sits behind all content; overlays/modals stack above it). */
+.main::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.syncBtn {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.syncBtn:disabled {
+  cursor: default;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.4rem, 4vw, 1.9rem);
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.back {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--brand);
+}
+
+.offlineHint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.9rem;
+}
+
+/* ---- Generic form ---- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.input,
+.select,
+.textarea {
+  font: inherit;
+  font-size: 1rem; /* 16px: prevents iOS focus-zoom */
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.submit {
+  appearance: none;
+  border: none;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  font: inherit;
+  font-weight: 600;
+  padding-block: 0.85rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  margin: 0;
+  background: #fdecec;
+  color: #9b1c1c;
+  border: 1px solid #f5c2c2;
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.9rem;
+}
+
+/* ---- Segmented toggle (return kind, payment) ---- */
+.segment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chipActive {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+
+/* ---- Product picker ---- */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pickerRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pickerInput {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.pickerScan {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  padding-inline: 0.9rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pickerResults {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 18rem;
+  overflow: auto;
+}
+
+.pickerItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: start;
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.pickerItem:hover {
+  border-color: var(--brand);
+}
+
+.pickerName {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.pickerMeta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pickerEmpty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 0.5rem 0.2rem;
+}
+
+/* ---- Cart ---- */
+.cart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cartLine {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.cartHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cartName {
+  font-weight: 600;
+}
+
+.cartControls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.miniLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.miniInput {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.55rem;
+  width: 100%;
+}
+
+.lineFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.lineTotal {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.removeBtn {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--error);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cartEmpty {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 0.75rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.totalLabel {
+  color: var(--text-muted);
+}
+
+.totalValue {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+/* ---- Soft-block confirm + receipt overlays ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.confirmBox,
+.receipt {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.confirmTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #92600a;
+}
+
+.confirmBody {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.confirmActions,
+.receiptActions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.confirmActions > *,
+.receiptActions > * {
+  flex: 1;
+}
+
+.btnGhost {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  padding-block: 0.7rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btnGo {
+  appearance: none;
+  border: none;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  font: inherit;
+  font-weight: 600;
+  padding-block: 0.7rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.btnWarn {
+  appearance: none;
+  border: none;
+  background: var(--secondary);
+  color: #2a1700;
+  font: inherit;
+  font-weight: 600;
+  padding-block: 0.7rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+/* ---- Receipt ---- */
+.receiptStore {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.receiptDate {
+  margin: 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.receiptLines {
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem 0;
+  border-block: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.receiptLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.receiptLineQty {
+  color: var(--text-muted);
+}
+
+.receiptTotal {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.receiptThanks {
+  margin: 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ---- History list ---- */
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.count {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.txRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.8rem 1rem;
+}
+
+.txMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.txName {
+  font-weight: 600;
+}
+
+.txMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.txBadge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--border);
+}
+
+.badgeSell {
+  color: #1c7c54;
+  background: #e7f6ee;
+  border-color: #b6e2cd;
+}
+
+.badgeBuy {
+  color: #1c4f7c;
+  background: #e7f0f6;
+  border-color: #b6cfe2;
+}
+
+.badgeReturn {
+  color: #92600a;
+  background: #fdf2d6;
+  border-color: #f1d999;
+}
+
+.badgeExpense {
+  color: #9b1c1c;
+  background: #fdecec;
+  border-color: #f5c2c2;
+}
+
+.txAmount {
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* signed amounts in the global history (money in / out) */
+.txIn {
+  color: var(--primary);
+}
+.txOut {
+  color: var(--error);
+}
+
+.empty {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.emptyHint {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ---- Phase 5: customers, suppliers & debt ---- */
+
+/* Selected party chip (sell/buy flows). */
+.partySelected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.partyName {
+  font-size: 0.9rem;
+}
+
+/* Payment-type ledger badge (debt_payment / supplier_payment). */
+.badgePay {
+  color: #155e63;
+  background: #def0f1;
+  border-color: #a9d9dc;
+}
+
+.badgeService {
+  color: #5b21b6;
+  background: #ede9fe;
+  border-color: #c4b5fd;
+}
+
+/* Debt amount emphasis in lists / profiles. */
+.debtPos {
+  color: #9b1c1c;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.debtClear {
+  color: #1c7c54;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Aging badge — reuses the return/expense palettes by severity. */
+.ageFresh {
+  color: #1c7c54;
+  background: #e7f6ee;
+  border-color: #b6e2cd;
+}
+
+.ageDue {
+  color: #92600a;
+  background: #fdf2d6;
+  border-color: #f1d999;
+}
+
+.ageOver {
+  color: #9b1c1c;
+  background: #fdecec;
+  border-color: #f5c2c2;
+}
+
+/* Totals summary card atop a list. */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+
+.statLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.statValue {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+/* Profile header: big outstanding balance + actions. */
+.profile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.profileMeta {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.profileBalanceLabel {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-block-start: 0.4rem;
+}
+
+.profileBalance {
+  font-size: 1.9rem;
+  font-weight: 800;
+}
+
+.partyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.partyActions > * {
+  flex: 1;
+  min-width: 8rem;
+}
+
+/* Compact primary "add" button (list headers: customers / suppliers). */
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  appearance: none;
+  border: none;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font: inherit;
+  font-weight: 700;
+  padding: 0.65rem 1.15rem;
+  border-radius: 0.6rem;
+  text-decoration: none;
+  white-space: nowrap;
+  min-block-size: 44px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow 0.2s, transform 0.1s;
+}
+.addBtn:hover {
+  box-shadow: 0 0 22px -4px rgba(16, 185, 129, 0.5);
+}
+.addBtn:active {
+  transform: scale(0.98);
+}
+.addIcon {
+  inline-size: 18px;
+  block-size: 18px;
+  flex-shrink: 0;
+}
+
+/* Search field with a leading icon. */
+.searchField {
+  position: relative;
+  display: flex;
+}
+.searchIcon {
+  position: absolute;
+  inset-inline-start: 0.8rem;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  inline-size: 18px;
+  block-size: 18px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.searchField .pickerInput {
+  padding-inline-start: 2.5rem;
+}
+
+/* List row lead: avatar (initials) + main text. */
+.txLead {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+.avatar {
+  inline-size: 2.4rem;
+  block-size: 2.4rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(78, 222, 163, 0.12);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* Ledger badge palettes — dark always (every screen using this sheet is dark). */
+.error,
+.badgeExpense {
+  background: #2a1414;
+  color: #f3b4b4;
+  border-color: #5b2222;
+}
+.badgeSell,
+.ageFresh,
+.debtClear {
+  color: #8fe3bb;
+  background: #11241b;
+  border-color: #1f5b3f;
+}
+.badgeBuy {
+  color: #9cc7ee;
+  background: #111d2a;
+  border-color: #1f3f5b;
+}
+.badgeReturn,
+.ageDue {
+  color: #f1d18a;
+  background: #2a230f;
+  border-color: #5b4a1f;
+}
+.confirmTitle {
+  color: #f1d18a;
+}
+.badgePay {
+  color: #8fd5da;
+  background: #0f2426;
+  border-color: #1f5358;
+}
+.badgeService {
+  color: #d6c8ff;
+  background: #221a3a;
+  border-color: #4a3a7a;
+}
+.ageOver,
+.debtPos {
+  color: #f3b4b4;
+}
+.ageOver {
+  background: #2a1414;
+  border-color: #5b2222;
+}
+
+/* ---- mobile (≤480px) ---- */
+@media (max-width: 480px) {
+  .main {
+    padding-inline: 0.9rem;
+    padding-block: 1rem 2.5rem;
+    gap: 1rem;
+  }
+  .title {
+    font-size: 1.35rem;
+  }
+  .form,
+  .summary {
+    padding: 1.1rem;
+  }
+  .row {
+    grid-template-columns: 1fr;
+  }
+  .submit {
+    min-block-size: 48px;
+  }
+  .titleRow {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .addBtn {
+    inline-size: 100%;
+    justify-content: center;
+    min-block-size: 48px;
+  }
+}

@@ -1,0 +1,85 @@
+import { redirect } from "next/navigation";
+import { getCurrentLocale } from "@/i18n/locale";
+import { getDictionary } from "@/i18n/get-dictionary";
+import { getUser, getMerchant } from "@/lib/auth/merchant";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { SettingsForm } from "./SettingsForm";
+import { PasswordChangeForm } from "./PasswordChangeForm";
+import { ApiKeysDisclosure } from "./ApiKeysDisclosure";
+import { listApiKeys } from "./api-keys-actions";
+import { LogoUpload } from "./LogoUpload";
+import styles from "@/app/products/product-form.module.css";
+
+export default async function SettingsPage() {
+  const user = await getUser();
+  if (!user) redirect("/login");
+  const merchant = await getMerchant();
+  if (!merchant) redirect("/setup");
+
+  const locale = await getCurrentLocale();
+  const dict = await getDictionary(locale);
+  const apiKeys = await listApiKeys();
+
+  // Only email/password accounts can change a password here (Google users manage
+  // theirs with Google).
+  const providers = (user.app_metadata?.providers as string[] | undefined) ?? [];
+  const hasPassword =
+    providers.includes("email") ||
+    (user.identities ?? []).some((i) => i.provider === "email");
+
+  return (
+    <main className={styles.main}>
+      <div className={styles.topbar}>
+        <span className={styles.logo}>{dict.app.name}</span>
+        <div className={styles.headerActions}>
+          <LanguageSwitcher
+            current={locale}
+            labels={{ arabic: dict.common.arabic, english: dict.common.english }}
+          />
+        </div>
+      </div>
+
+      <div className={styles.card}>
+        <h1 className={styles.title}>{dict.settings.title}</h1>
+        <p className={styles.muted}>{dict.settings.subtitle}</p>
+        <SettingsForm
+          initial={{
+            notify_channel: merchant.notify_channel ?? "telegram",
+            telegram_chat_id: merchant.telegram_chat_id ?? "",
+          }}
+          settings={dict.settings}
+          common={dict.common}
+          botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? null}
+        />
+      </div>
+
+      <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
+        <h1 className={styles.title}>{dict.settings.logo.title}</h1>
+        <p className={styles.muted}>{dict.settings.logo.subtitle}</p>
+        <LogoUpload initialUrl={merchant.logo_url} labels={dict.settings.logo} />
+      </div>
+
+      {hasPassword && (
+        <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
+          <h1 className={styles.title}>{dict.settings.password.title}</h1>
+          <PasswordChangeForm
+            email={user.email ?? ""}
+            storeName={merchant.store_name}
+            labels={dict.settings.password}
+            passwordLabels={dict.password}
+          />
+        </div>
+      )}
+
+      <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
+        <h1 className={styles.title}>{dict.settings.apiKeys.title}</h1>
+        <p className={styles.muted}>{dict.settings.apiKeys.subtitle}</p>
+        <ApiKeysDisclosure
+          initialKeys={apiKeys}
+          labels={dict.settings.apiKeys}
+          locale={locale}
+        />
+      </div>
+    </main>
+  );
+}
