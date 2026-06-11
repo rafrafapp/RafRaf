@@ -22,7 +22,6 @@ export default async function AdminAnnouncementsPage() {
           placeholder: an.message,
           all: an.all,
           telegram: an.telegram,
-          whatsapp: an.whatsapp,
           send: an.send,
           sending: an.sending,
           sent: an.sent,

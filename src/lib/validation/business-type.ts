@@ -12,7 +12,7 @@ const slug = z
   .trim()
   .min(1)
   .max(40)
-  .regex(/^[a-z0-9_]+$/, "lowercase letters, digits and _ only");
+  .regex(/^[a-z0-9_-]+$/, "lowercase letters, digits, _ and - only");
 
 const shortName = z.string().trim().min(1).max(80).regex(NO_TAGS);
 

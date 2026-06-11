@@ -22,7 +22,7 @@ type Props = {
   labels: {
     title: string;
     print: string;
-    whatsapp: string;
+    share: string;
     thanks: string;
     total: string;
     newSale: string;
@@ -36,8 +36,8 @@ const nf = new Intl.NumberFormat("en-US");
 const safeHtml = (s: string) => escapeHtml(sanitizeString(s));
 
 // Printable, shareable sale receipt rendered after completing a cart. Print opens
-// a self-contained window (no app print-CSS gymnastics); WhatsApp share uses a
-// wa.me link (no Green API needed — that's Phase 8).
+// a self-contained window (no app print-CSS gymnastics); share uses the native
+// Web Share sheet (Telegram, SMS, …) with a clipboard fallback — no WhatsApp.
 export function Receipt({
   storeName,
   currency,
@@ -71,12 +71,21 @@ export function Receipt({
     ].join("\n");
   }
 
-  function shareWhatsApp() {
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(buildText())}`,
-      "_blank",
-      "noopener",
-    );
+  async function share() {
+    const text = buildText();
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ text });
+        return;
+      }
+    } catch {
+      return; // user dismissed the native share sheet
+    }
+    try {
+      await navigator.clipboard?.writeText(text);
+    } catch {
+      /* clipboard unavailable — nothing more to do */
+    }
   }
 
   function print() {
@@ -145,12 +154,8 @@ export function Receipt({
           <button type="button" className={styles.btnGhost} onClick={print}>
             {labels.print}
           </button>
-          <button
-            type="button"
-            className={styles.btnGhost}
-            onClick={shareWhatsApp}
-          >
-            {labels.whatsapp}
+          <button type="button" className={styles.btnGhost} onClick={share}>
+            {labels.share}
           </button>
         </div>
         <button type="button" className={styles.btnGo} onClick={onClose}>

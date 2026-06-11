@@ -19,6 +19,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
 import { ProductPicker } from "@/components/ProductPicker";
 import { PartyPicker, type Party } from "@/components/PartyPicker";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/components/transactions.module.css";
 
 type Props = {
@@ -315,7 +316,14 @@ export function TransactionForm({
               onClick={save}
               disabled={saving}
             >
-              {saving ? tx.sell.completing : block.save}
+              {saving ? (
+                <>
+                  <Spinner />
+                  {tx.sell.completing}
+                </>
+              ) : (
+                block.save
+              )}
             </button>
           </>
         )}

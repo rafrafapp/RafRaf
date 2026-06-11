@@ -15,11 +15,11 @@ import {
 import { syncAll } from "@/lib/offline/sync";
 import { useSync } from "@/lib/offline/useSync";
 import { parsePositive } from "@/lib/validation/transaction";
-import { whatsappNumber } from "@/lib/validation/customer";
 import { sendDebtReminder } from "@/lib/messaging/actions";
 import type { TxType } from "@/lib/offline/db";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
+import { Spinner } from "@/components/Spinner";
 import { CustomerForm } from "./CustomerForm";
 import styles from "@/components/transactions.module.css";
 
@@ -29,7 +29,6 @@ type Props = {
   id: string;
   merchantId: string;
   currency: string;
-  storeName: string;
   locale: Locale;
   appName: string;
   customers: Dictionary["customers"];
@@ -48,7 +47,6 @@ export function CustomerView({
   id,
   merchantId,
   currency,
-  storeName,
   locale,
   appName,
   customers: c,
@@ -138,33 +136,19 @@ export function CustomerView({
     }
   }
 
-  function remind() {
-    const num = whatsappNumber(customer!.phone);
-    const text = c.reminderText
-      .replace("{name}", customer!.name)
-      .replace("{store}", storeName)
-      .replace("{amount}", nf.format(debt))
-      .replace("{currency}", currency);
-    window.open(
-      `https://wa.me/${num}?text=${encodeURIComponent(text)}`,
-      "_blank",
-      "noopener",
-    );
-  }
-
-  // Owner-triggered reminder sent automatically from the store's WhatsApp
-  // (Green API), via the RLS-scoped server action.
-  function autoRemind() {
+  // Owner-triggered debt reminder, sent to the customer over Telegram via the
+  // RLS-scoped server action. Needs the customer's linked telegram_chat_id.
+  function sendReminder() {
     setRemindMsg(null);
     startRemind(async () => {
       const res = await sendDebtReminder(id);
       if ("ok" in res) setRemindMsg(c.remindSent);
       else
         setRemindMsg(
-          res.error === "not_configured"
-            ? c.whatsappOff
-            : res.error === "no_phone"
-              ? c.noPhone
+          res.error === "no_telegram"
+            ? c.noTelegram
+            : res.error === "not_configured"
+              ? c.telegramOff
               : c.remindFail,
         );
     });
@@ -176,8 +160,6 @@ export function CustomerView({
     void syncAll(merchantId).catch(() => {});
     router.push("/customers");
   }
-
-  const num = whatsappNumber(customer.phone);
 
   return (
     <main className={styles.main}>
@@ -238,19 +220,21 @@ export function CustomerView({
           <button type="button" className={styles.btnGo} onClick={openPay}>
             {c.pay.title}
           </button>
-          {num && debt > 0 && (
-            <button type="button" className={styles.btnGhost} onClick={remind}>
-              {c.remind}
-            </button>
-          )}
-          {num && debt > 0 && (
+          {debt > 0 && (
             <button
               type="button"
               className={styles.btnGhost}
-              onClick={autoRemind}
+              onClick={sendReminder}
               disabled={reminding}
             >
-              {c.remindAuto}
+              {reminding ? (
+                <>
+                  <Spinner />
+                  {c.remind}
+                </>
+              ) : (
+                c.remind
+              )}
             </button>
           )}
           <button
@@ -374,7 +358,14 @@ export function CustomerView({
                 onClick={submitPay}
                 disabled={saving}
               >
-                {c.pay.save}
+                {saving ? (
+                  <>
+                    <Spinner />
+                    {c.pay.save}
+                  </>
+                ) : (
+                  c.pay.save
+                )}
               </button>
             </div>
           </div>

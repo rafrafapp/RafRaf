@@ -250,7 +250,6 @@ export function BroadcastForm({
     placeholder: string;
     all: string;
     telegram: string;
-    whatsapp: string;
     send: string;
     sending: string;
     sent: string; // "... {n}"
@@ -259,7 +258,7 @@ export function BroadcastForm({
   };
 }) {
   const [message, setMessage] = useState("");
-  const [channel, setChannel] = useState<"all" | "telegram" | "whatsapp">("all");
+  const [channel, setChannel] = useState<"all" | "telegram">("all");
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -278,12 +277,11 @@ export function BroadcastForm({
           value={channel}
           disabled={pending}
           onChange={(e) =>
-            setChannel(e.target.value as "all" | "telegram" | "whatsapp")
+            setChannel(e.target.value as "all" | "telegram")
           }
         >
           <option value="all">{labels.all}</option>
           <option value="telegram">{labels.telegram}</option>
-          <option value="whatsapp">{labels.whatsapp}</option>
         </select>
         <button
           type="button"

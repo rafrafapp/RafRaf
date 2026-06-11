@@ -12,7 +12,6 @@ export const maxDuration = 60;
 type MerchantRow = {
   id: string;
   store_name: string;
-  phone: string | null;
   default_currency: string | null;
   notify_channel: string | null;
   telegram_chat_id: string | null;
@@ -25,7 +24,7 @@ function yesterdayKey(): string {
 }
 
 // Nightly (Vercel cron): send each merchant a short Arabic summary of yesterday
-// on their preferred channel (Telegram by default, WhatsApp if chosen).
+// over Telegram (unless they've turned notifications off).
 export async function GET(req: Request) {
   if (!authorizeCron(req))
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -33,7 +32,7 @@ export async function GET(req: Request) {
   const admin = createAdminClient();
   const { data } = await admin
     .from("merchants")
-    .select("id,store_name,phone,default_currency,notify_channel,telegram_chat_id");
+    .select("id,store_name,default_currency,notify_channel,telegram_chat_id");
   const merchants = (data ?? []) as MerchantRow[];
   const day = yesterdayKey();
 

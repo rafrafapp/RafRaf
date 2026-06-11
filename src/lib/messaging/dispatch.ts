@@ -1,30 +1,27 @@
 import "server-only";
 import { sendTelegram } from "./telegram";
-import { sendWhatsApp } from "./whatsapp";
 
-export type NotifyChannel = "telegram" | "whatsapp" | "off";
+export type NotifyChannel = "telegram" | "off";
 
-// The merchant fields needed to route a notification to their chosen channel.
+// The merchant fields needed to route a notification. Telegram is the only
+// channel now (WhatsApp/Green API was removed).
 export type NotifiableMerchant = {
   notify_channel: string | null;
   telegram_chat_id: string | null;
-  phone: string | null;
 };
 
-// Send a merchant-facing notification on their preferred channel. Telegram is
-// the default; an unset/missing address just no-ops (best-effort).
+// Send a merchant-facing notification over Telegram. An unset chat id or a
+// channel of 'off' (or any legacy value) just no-ops (best-effort).
 export async function notifyMerchant(
   m: NotifiableMerchant,
   text: string,
 ): Promise<boolean> {
-  const channel = (m.notify_channel ?? "telegram") as NotifyChannel;
-  if (channel === "telegram") return sendTelegram(m.telegram_chat_id, text);
-  if (channel === "whatsapp") return sendWhatsApp(m.phone, text);
+  if ((m.notify_channel ?? "telegram") === "telegram")
+    return sendTelegram(m.telegram_chat_id, text);
   return false; // 'off'
 }
 
-// Admin alerts (backup failures): prefer Telegram, fall back to WhatsApp.
+// Admin alerts (backup failures) go to the admin's Telegram chat.
 export async function notifyAdmin(text: string): Promise<boolean> {
-  if (await sendTelegram(process.env.RAFRAF_ADMIN_CHAT_ID, text)) return true;
-  return sendWhatsApp(process.env.RAFRAF_ADMIN_PHONE ?? null, text);
+  return sendTelegram(process.env.RAFRAF_ADMIN_CHAT_ID, text);
 }

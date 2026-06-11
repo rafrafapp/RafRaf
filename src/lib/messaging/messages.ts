@@ -1,7 +1,7 @@
 import "server-only";
 
-// Short, clean Arabic templates — channel-agnostic (sent via Telegram or
-// WhatsApp). Numbers use Western digits for clarity.
+// Short, clean Arabic templates, sent over Telegram. Numbers use Western digits
+// for clarity.
 
 const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 

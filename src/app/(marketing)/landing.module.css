@@ -21,7 +21,6 @@
   --on-surface-variant: #bbcabf;
   --outline-variant: #3c4a42;
   --outline: #86948a;
-  --whatsapp: #25d366;
 
   background: var(--bg);
   color: var(--on-surface);
@@ -418,11 +417,9 @@
 .cSecondary { color: var(--secondary); }
 .cTertiary { color: var(--tertiary); }
 .cError { color: var(--error); }
-.cWhatsapp { color: var(--whatsapp); }
 .chipPrimary { background: rgba(78, 222, 163, 0.1); color: var(--primary); }
 .chipSecondary { background: rgba(255, 185, 95, 0.1); color: var(--secondary); }
 .chipTertiary { background: rgba(255, 179, 173, 0.1); color: var(--tertiary); }
-.chipWhatsapp { background: rgba(37, 211, 102, 0.1); color: var(--whatsapp); }
 
 /* ---- how it works ---- */
 .stepsWrap {

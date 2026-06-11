@@ -37,8 +37,12 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
   useEffect(() => {
     const hints = new Map();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, FORMATS);
+    // TRY_HARDER makes the decoder spend more effort per frame — the difference
+    // between "camera is on but never reads" and reliable EAN-13/QR detection on
+    // phone cameras (slightly slower per attempt, well worth it for retail codes).
+    hints.set(DecodeHintType.TRY_HARDER, true);
     const reader = new BrowserMultiFormatReader(hints, {
-      delayBetweenScanAttempts: 150,
+      delayBetweenScanAttempts: 100,
     });
 
     let controls: IScannerControls | undefined;
@@ -92,7 +96,13 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
           </p>
         ) : (
           <div className={styles.viewport}>
-            <video ref={videoRef} className={styles.video} muted playsInline />
+            <video
+              ref={videoRef}
+              className={styles.video}
+              autoPlay
+              muted
+              playsInline
+            />
             <div className={styles.frame} aria-hidden="true" />
           </div>
         )}

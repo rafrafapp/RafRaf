@@ -85,6 +85,7 @@
     "currency": "Default currency",
     "phone": "Phone number",
     "logoUrl": "Logo URL",
+    "offersMobileCredit": "Do you offer mobile-credit top-ups?",
     "submit": "Create store",
     "businessTypes": {
       "grocery": "Grocery",
@@ -139,7 +140,7 @@
     "activity": {
       "sell": "Sale", "buy": "Purchase", "debt_payment": "Debt payment", "supplier_payment": "Supplier payment",
       "expense": "Expense", "return_customer": "Customer return", "return_supplier": "Supplier return",
-      "mobile_credit": "Mobile credit", "sham_cash": "Sham Cash"
+      "mobile_credit": "Mobile credit", "sham_cash": "Sham Cash", "sham_cash_void": "Sham Cash cancelled"
     },
     "payments": { "cash": "Cash", "credit": "Credit", "partial": "Partial" },
     "plans": { "free": "Free", "basic": "Basic", "smart": "Smart" },
@@ -300,7 +301,8 @@
       "debt_payment": "Debt payment",
       "supplier_payment": "Supplier payment",
       "mobile_credit": "Mobile credit",
-      "sham_cash": "Sham Cash"
+      "sham_cash": "Sham Cash",
+      "sham_cash_void": "Sham Cash void"
     },
     "payments": {
       "cash": "Cash",
@@ -350,6 +352,9 @@
       "stockWarnBody": "Available of \"{name}\": {stock}. Sell anyway?",
       "confirm": "Sell anyway",
       "cancel": "Cancel",
+      "oversellTitle": "Stock is empty — are you sure?",
+      "oversellYes": "Yes, continue",
+      "oversellNo": "No, review",
       "customer": "Customer",
       "searchCustomer": "Search a customer by name or phone",
       "walkIn": "Walk-in (no account)",
@@ -366,7 +371,7 @@
       "title": "Receipt",
       "date": "Date",
       "print": "Print",
-      "whatsapp": "Share on WhatsApp",
+      "share": "Share",
       "thanks": "Thank you for your business 🌿",
       "total": "Total",
       "close": "Close"
@@ -428,7 +433,11 @@
       "emptyHint": "Start with your first sale.",
       "emptyFiltered": "No matching results.",
       "results": "Results",
-      "invoiceItems": "Invoice • {n} items"
+      "invoiceItems": "Invoice • {n} items",
+      "cancel": "Cancel",
+      "cancelConfirm": "Cancel this Sham Cash transaction? A reversing entry will be recorded.",
+      "cancelYes": "Yes, cancel",
+      "canceling": "Cancelling…"
     },
     "pickProduct": "Pick a product",
     "noProducts": "No products. Add a product first.",
@@ -454,7 +463,8 @@
     "fields": {
       "name": "Customer name",
       "phone": "Phone number",
-      "neighborhood": "Neighborhood / area"
+      "neighborhood": "Neighborhood / area",
+      "telegramChatId": "Telegram chat ID"
     },
     "debt": "Outstanding debt",
     "noDebt": "No debt",
@@ -474,13 +484,12 @@
       "save": "Record payment",
       "invalid": "Enter a valid amount."
     },
-    "remind": "Remind via WhatsApp",
-    "remindAuto": "Send auto reminder",
+    "remind": "Remind via Telegram",
     "remindSent": "Reminder sent ✅",
     "remindFail": "Could not send the reminder",
-    "whatsappOff": "WhatsApp service is not enabled",
-    "reminderText": "{name}, a friendly reminder that your outstanding balance at {store} is {amount} {currency}. Thank you 🌿",
-    "noPhone": "This customer has no phone number.",
+    "noTelegram": "This customer has no Telegram linked",
+    "telegramOff": "Telegram is not enabled",
+    "telegramHint": "So the customer gets reminders on Telegram: they open the store's bot, tap Start, then copy the ID the bot sends and give it to you to enter here.",
     "ledger": "Statement",
     "ledgerEmpty": "No transactions yet.",
     "edit": "Edit details",
@@ -523,8 +532,6 @@
       "save": "Record payment",
       "invalid": "Enter a valid amount."
     },
-    "remind": "Message via WhatsApp",
-    "noPhone": "This supplier has no phone number.",
     "ledger": "Statement",
     "ledgerEmpty": "No transactions yet.",
     "edit": "Edit details",
@@ -594,13 +601,13 @@
     "backToDashboard": "Back to dashboard",
     "notifChannel": "Notification channel",
     "channels": {
-      "telegram": "Telegram (recommended)",
-      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
       "off": "Notifications off"
     },
     "telegramChatId": "Telegram chat ID",
     "telegramHint": "Open your store's Telegram bot and tap Start, then copy the ID it sends you and paste it here.",
     "openBot": "Open the bot",
+    "offersMobileCredit": "I offer mobile-credit top-ups",
     "save": "Save settings",
     "saving": "Saving…",
     "saved": "Saved ✅",
@@ -714,7 +721,6 @@
       "backup": "Backups (Google)",
       "masterSheet": "Master sheet",
       "telegram": "Telegram",
-      "whatsapp": "WhatsApp",
       "rateLimit": "Rate limit (Upstash)",
       "allowlist": "Allowlisted IPs",
       "lastBackup": "Last backup",
@@ -792,7 +798,6 @@
       "message": "Message text",
       "all": "All",
       "telegram": "Telegram only",
-      "whatsapp": "WhatsApp only",
       "send": "Send",
       "sending": "Sending…",
       "sent": "Sent to {n}",
@@ -804,7 +809,7 @@
       "add": "Add type",
       "edit": "Edit",
       "slug": "Slug",
-      "slugHint": "Lowercase letters, digits and _ only — can't be changed after creation.",
+      "slugHint": "Lowercase letters, digits, _ and - only — can't be changed after creation.",
       "nameAr": "Name (Arabic)",
       "nameEn": "Name (English)",
       "sort": "Order",
@@ -867,7 +872,7 @@
       "debt": { "title": "Debt ledger", "text": "Track every lira you're owed or you owe, with professional account statements." },
       "reports": { "title": "Clear reports", "text": "Detailed daily, weekly and monthly reports on financial and tax performance." },
       "backup": { "title": "Automatic backup", "text": "Your data is always safe — automatic cloud backup the moment the internet is available." },
-      "whatsapp": { "title": "WhatsApp alerts", "text": "Send invoices and debt reminders to customers directly over WhatsApp." }
+      "telegram": { "title": "Telegram alerts", "text": "Debt reminders to customers and daily summaries to the merchant, sent directly over Telegram." }
     },
     "steps": {
       "title": "Start in 3 simple steps",

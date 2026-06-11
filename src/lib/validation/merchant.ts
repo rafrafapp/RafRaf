@@ -15,10 +15,10 @@ export type BusinessType = (typeof BUSINESS_TYPES)[number];
 export const CURRENCIES = ["SYP", "USD", "EUR"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
-// Notification channels (Phase 8). Telegram is the default/primary; WhatsApp is
-// the secondary; 'off' disables merchant notifications. Mirrored by the
-// merchants_notify_channel_check DB constraint.
-export const NOTIFY_CHANNELS = ["telegram", "whatsapp", "off"] as const;
+// Notification channels (Phase 8). Telegram is the only channel; 'off' disables
+// merchant notifications. Mirrored by the merchants_notify_channel_check DB
+// constraint.
+export const NOTIFY_CHANNELS = ["telegram", "off"] as const;
 export type NotifyChannel = (typeof NOTIFY_CHANNELS)[number];
 
 export const notificationSettingsSchema = z.object({
@@ -51,7 +51,7 @@ export const storeSetupSchema = z.object({
     .trim()
     .min(1)
     .max(40)
-    .regex(/^[a-z0-9_]+$/),
+    .regex(/^[a-z0-9_-]+$/),
   default_currency: z.enum(CURRENCIES),
   phone: z
     .string()

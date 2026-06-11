@@ -177,11 +177,11 @@ export default async function LandingPage() {
                 <p className={s.cardText}>{t.features.backup.text}</p>
               </div>
               <div className={`${s.featureCard} ${s.lgCol4} ${s.col6} ${s.glassCard}`}>
-                <div className={`${s.cardChip} ${s.chipWhatsapp}`}>
+                <div className={`${s.cardChip} ${s.chipPrimary}`}>
                   <IconChat size={22} />
                 </div>
-                <h3 className={s.cardTitle}>{t.features.whatsapp.title}</h3>
-                <p className={s.cardText}>{t.features.whatsapp.text}</p>
+                <h3 className={s.cardTitle}>{t.features.telegram.title}</h3>
+                <p className={s.cardText}>{t.features.telegram.text}</p>
               </div>
             </div>
           </div>

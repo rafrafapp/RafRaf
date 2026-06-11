@@ -4,9 +4,9 @@
 //
 // The DOMPurify-based deep sanitizer lives in ./sanitize-html (`sanitizeString`),
 // which runs in the browser + Node but NOT the Edge runtime. They're split so an
-// Edge-reachable validation file (e.g. customer.ts — pulled into middleware via the
-// messaging → whatsapp chain, which needs only NO_TAGS/PHONE_RE) can never
-// transitively bundle DOMPurify into the Edge runtime.
+// Edge-reachable validation file (anything transitively imported by middleware,
+// which needs only NO_TAGS/PHONE_RE) can never bundle DOMPurify into the Edge
+// runtime.
 
 // Display-time defense in depth. Runs per cell per render (search, lists) so it's a
 // CHEAP regex tag-strip — the data is already sanitized at input + DB-constrained,

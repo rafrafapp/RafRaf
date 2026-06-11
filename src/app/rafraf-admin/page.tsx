@@ -46,7 +46,6 @@ export default async function AdminOverviewPage() {
     { label: h.backup, ok: health.backup },
     { label: h.masterSheet, ok: health.masterSheet },
     { label: h.telegram, ok: health.telegram },
-    { label: h.whatsapp, ok: health.whatsapp },
     { label: h.rateLimit, ok: health.rateLimit },
     {
       label: h.allowlist,

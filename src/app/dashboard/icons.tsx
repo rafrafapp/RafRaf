@@ -208,6 +208,8 @@ export function ActivityIcon({ type, size = 20 }: { type: TxType; size?: number 
       return <IconPhone size={size} />;
     case "sham_cash":
       return <IconExchange size={size} />;
+    case "sham_cash_void":
+      return <IconReturn size={size} />;
     default:
       return <IconHistory size={size} />;
   }

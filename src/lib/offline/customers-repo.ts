@@ -13,6 +13,7 @@ function managedFields(d: CustomerInput) {
     name: d.name,
     phone: d.phone ?? null,
     neighborhood: d.neighborhood ?? null,
+    telegram_chat_id: d.telegram_chat_id ?? null,
   };
 }
 

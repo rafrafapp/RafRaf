@@ -11,6 +11,7 @@ import { useSync } from "@/lib/offline/useSync";
 import { PAYMENT_METHODS, parsePositive } from "@/lib/validation/transaction";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -199,7 +200,14 @@ export function ShamCashForm({
           onClick={save}
           disabled={saving}
         >
-          {saving ? tx.sell.completing : s.save}
+          {saving ? (
+            <>
+              <Spinner />
+              {tx.sell.completing}
+            </>
+          ) : (
+            s.save
+          )}
         </button>
       </div>
     </main>

@@ -30,6 +30,7 @@ export default async function DashboardPage() {
       currency={merchant.default_currency}
       storeName={storeName}
       logoUrl={merchant.logo_url}
+      offersMobileCredit={merchant.offers_mobile_credit ?? true}
       locale={locale}
       dashboard={dict.dashboard}
       common={dict.common}

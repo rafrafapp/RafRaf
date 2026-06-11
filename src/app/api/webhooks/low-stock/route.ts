@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // "Instant" low-stock alert. Wire a Supabase Database Webhook on UPDATE of
-// public.products → this URL, with header `x-webhook-secret: <WHATSAPP_WEBHOOK_SECRET>`.
+// public.products → this URL, with header `x-webhook-secret: <LOW_STOCK_WEBHOOK_SECRET>`.
 // Stock is moved by record_transaction during sync, so this fires right after a
 // sale syncs. We alert only on the downward CROSSING (was above the threshold,
 // now at/below) so a merchant isn't messaged on every decrement while already low.
@@ -21,7 +21,7 @@ type ProductRec = {
 const num = (v: number | string | null | undefined) => Number(v ?? 0) || 0;
 
 export async function POST(req: Request) {
-  const secret = process.env.WHATSAPP_WEBHOOK_SECRET;
+  const secret = process.env.LOW_STOCK_WEBHOOK_SECRET;
   if (!secret || req.headers.get("x-webhook-secret") !== secret)
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const { data: m } = await admin
     .from("merchants")
-    .select("store_name,phone,notify_channel,telegram_chat_id")
+    .select("store_name,notify_channel,telegram_chat_id")
     .eq("id", rec.merchant_id)
     .single();
   let alerted = false;

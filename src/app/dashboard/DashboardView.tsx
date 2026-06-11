@@ -73,6 +73,7 @@ type Props = {
   currency: string;
   storeName: string;
   logoUrl: string | null;
+  offersMobileCredit: boolean;
   locale: Locale;
   dashboard: Dictionary["dashboard"];
   common: Dictionary["common"];
@@ -84,11 +85,16 @@ export function DashboardView({
   currency,
   storeName,
   logoUrl,
+  offersMobileCredit,
   locale,
   dashboard: d,
   common,
   sync,
 }: Props) {
+  // Hide the mobile-credit (وحدات) action for merchants who don't offer it.
+  const actions = offersMobileCredit
+    ? ACTIONS
+    : ACTIONS.filter((a) => a.label !== "mobileCredit");
   const { online, syncing, sync: doSync } = useSync(merchantId);
 
   // Live, offline-first reads straight from IndexedDB (re-render on any sync/write).
@@ -278,7 +284,7 @@ export function DashboardView({
           </div>
           <div className={styles.actionsCol}>
             <nav className={styles.actions}>
-              {ACTIONS.map((a) => (
+              {actions.map((a) => (
                 <Link key={a.href} href={a.href} className={`${styles.action} ${styles.glass}`}>
                   <span className={styles.actionIcon}>
                     <a.Icon size={24} className={styles[a.color]} />

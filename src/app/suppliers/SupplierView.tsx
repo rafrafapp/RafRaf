@@ -14,10 +14,10 @@ import {
 import { syncAll } from "@/lib/offline/sync";
 import { useSync } from "@/lib/offline/useSync";
 import { parsePositive } from "@/lib/validation/transaction";
-import { whatsappNumber } from "@/lib/validation/customer";
 import type { TxType } from "@/lib/offline/db";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
+import { Spinner } from "@/components/Spinner";
 import { SupplierForm } from "./SupplierForm";
 import styles from "@/components/transactions.module.css";
 
@@ -117,19 +117,12 @@ export function SupplierView({
     }
   }
 
-  function message() {
-    const num = whatsappNumber(supplier!.phone);
-    window.open(`https://wa.me/${num}`, "_blank", "noopener");
-  }
-
   async function onDelete() {
     if (!window.confirm(s.deleteConfirm)) return;
     await deleteSupplierLocal(id);
     void syncAll(merchantId).catch(() => {});
     router.push("/suppliers");
   }
-
-  const num = whatsappNumber(supplier.phone);
 
   return (
     <main className={styles.main}>
@@ -183,11 +176,6 @@ export function SupplierView({
           <button type="button" className={styles.btnGo} onClick={openPay}>
             {s.pay.title}
           </button>
-          {num && (
-            <button type="button" className={styles.btnGhost} onClick={message}>
-              {s.remind}
-            </button>
-          )}
           <button
             type="button"
             className={styles.btnGhost}
@@ -308,7 +296,14 @@ export function SupplierView({
                 onClick={submitPay}
                 disabled={saving}
               >
-                {s.pay.save}
+                {saving ? (
+                  <>
+                    <Spinner />
+                    {s.pay.save}
+                  </>
+                ) : (
+                  s.pay.save
+                )}
               </button>
             </div>
           </div>

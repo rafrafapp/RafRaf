@@ -311,7 +311,8 @@ export async function pushPendingTransactions(
     type === "debt_payment" ||
     type === "supplier_payment" ||
     type === "mobile_credit" ||
-    type === "sham_cash";
+    type === "sham_cash" ||
+    type === "sham_cash_void";
 
   for (const t of pending) {
     const { data, error } = await supabase.rpc("record_transaction", {
@@ -390,6 +391,7 @@ type ServerCustomer = {
   name: string;
   phone: string | null;
   neighborhood: string | null;
+  telegram_chat_id: string | null;
   debt_balance: number | string;
   created_at: string;
   updated_at: string;
@@ -407,7 +409,7 @@ type ServerSupplier = {
 };
 
 const CUSTOMER_COLUMNS =
-  "id,merchant_id,name,phone,neighborhood,debt_balance,created_at,updated_at";
+  "id,merchant_id,name,phone,neighborhood,telegram_chat_id,debt_balance,created_at,updated_at";
 const SUPPLIER_COLUMNS =
   "id,merchant_id,name,phone,payment_terms,balance_owed,created_at,updated_at";
 
@@ -418,6 +420,7 @@ function toLocalCustomerSynced(s: ServerCustomer): LocalCustomer {
     name: s.name,
     phone: s.phone,
     neighborhood: s.neighborhood,
+    telegram_chat_id: s.telegram_chat_id ?? null,
     debt_balance: Number(s.debt_balance),
     created_at: s.created_at,
     updated_at: s.updated_at,
@@ -469,6 +472,7 @@ export async function pushPendingCustomers(merchantId: string): Promise<void> {
           name: c.name,
           phone: c.phone,
           neighborhood: c.neighborhood,
+          telegram_chat_id: c.telegram_chat_id,
         },
         { onConflict: "id" },
       )

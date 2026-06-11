@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
-import { type LocalProduct, type PaymentMethod } from "@/lib/offline/db";
+import { getDb, type LocalProduct, type PaymentMethod } from "@/lib/offline/db";
 import { recordSale, type CartLine } from "@/lib/offline/transactions-repo";
 import { syncAll } from "@/lib/offline/sync";
 import { useSync } from "@/lib/offline/useSync";
@@ -14,6 +14,7 @@ import { SyncBadge } from "@/components/SyncBadge";
 import { ProductPicker } from "@/components/ProductPicker";
 import { PartyPicker, type Party } from "@/components/PartyPicker";
 import { Receipt, type ReceiptLine } from "@/components/Receipt";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -51,16 +52,16 @@ export function SellView({
   const [customer, setCustomer] = useState<Party | null>(null);
   const [paid, setPaid] = useState("");
   const [note, setNote] = useState("");
-  const [confirm, setConfirm] = useState<{
-    product: LocalProduct;
-    available: number;
-  } | null>(null);
+  const [overdraw, setOverdraw] = useState(false);
   const [receipt, setReceipt] = useState<{
     lines: ReceiptLine[];
     total: number;
     date: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
+  // Synchronous re-entrancy guard: complete() awaits a Dexie stock read before
+  // saving flips, so a ref (not state) is what actually blocks a double-submit.
+  const busyRef = useRef(false);
 
   const s = tx.sell;
   const payments = tx.payments as Record<string, string>;
@@ -86,17 +87,6 @@ export function SellView({
     });
   }
 
-  // Soft-block: warn (but allow) when the cart qty would exceed available stock.
-  function addToCart(p: LocalProduct) {
-    const existing = cart.find((l) => l.product_id === p.id);
-    const available = Number(p.stock);
-    if ((existing?.qty ?? 0) + 1 > available) {
-      setConfirm({ product: p, available });
-      return;
-    }
-    doAdd(p);
-  }
-
   function updateLine(index: number, patch: Partial<CartLine>) {
     setCart((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   }
@@ -107,8 +97,28 @@ export function SellView({
 
   const total = cart.reduce((sum, l) => sum + lineTotal(l), 0);
 
+  // Soft-block: if any line would drive stock negative (oversell), confirm first.
+  // Checked at completion so it catches every path — scan, quick-add, or editing
+  // the qty field directly. The sale is still allowed (negative stock is a UI soft
+  // block, not a DB constraint).
   async function complete() {
-    if (cart.length === 0 || saving) return;
+    if (cart.length === 0 || busyRef.current) return;
+    const db = getDb();
+    for (const l of cart) {
+      if (!l.product_id) continue;
+      const p = await db.products.get(l.product_id);
+      if (p && l.qty > Number(p.stock)) {
+        setOverdraw(true);
+        return;
+      }
+    }
+    await proceedComplete();
+  }
+
+  async function proceedComplete() {
+    if (cart.length === 0 || busyRef.current) return;
+    busyRef.current = true;
+    setOverdraw(false);
     setSaving(true);
     try {
       await recordSale({
@@ -139,6 +149,7 @@ export function SellView({
       void syncAll(merchantId).catch(() => {});
     } finally {
       setSaving(false);
+      busyRef.current = false;
     }
   }
 
@@ -175,7 +186,7 @@ export function SellView({
       <ProductPicker
         merchantId={merchantId}
         currency={currency}
-        onPick={addToCart}
+        onPick={doAdd}
         labels={{
           search: s.searchProduct,
           scan: s.scan,
@@ -340,38 +351,45 @@ export function SellView({
               onClick={complete}
               disabled={saving || cart.length === 0}
             >
-              {saving ? s.completing : s.complete}
+              {saving ? (
+                <>
+                  <Spinner />
+                  {s.completing}
+                </>
+              ) : (
+                s.complete
+              )}
             </button>
           </div>
         </div>
       )}
 
-      {confirm && (
+      {overdraw && (
         <div className={styles.overlay} role="dialog" aria-modal="true">
           <div className={styles.confirmBox}>
-            <p className={styles.confirmTitle}>{s.stockWarnTitle}</p>
-            <p className={styles.confirmBody}>
-              {s.stockWarnBody
-                .replace("{name}", confirm.product.name)
-                .replace("{stock}", nf.format(confirm.available))}
-            </p>
+            <p className={styles.confirmTitle}>{s.oversellTitle}</p>
             <div className={styles.confirmActions}>
               <button
                 type="button"
                 className={styles.btnGhost}
-                onClick={() => setConfirm(null)}
+                onClick={() => setOverdraw(false)}
               >
-                {s.cancel}
+                {s.oversellNo}
               </button>
               <button
                 type="button"
                 className={styles.btnWarn}
-                onClick={() => {
-                  doAdd(confirm.product);
-                  setConfirm(null);
-                }}
+                onClick={() => void proceedComplete()}
+                disabled={saving}
               >
-                {s.confirm}
+                {saving ? (
+                  <>
+                    <Spinner />
+                    {s.completing}
+                  </>
+                ) : (
+                  s.oversellYes
+                )}
               </button>
             </div>
           </div>
@@ -389,7 +407,7 @@ export function SellView({
           labels={{
             title: tx.receipt.title,
             print: tx.receipt.print,
-            whatsapp: tx.receipt.whatsapp,
+            share: tx.receipt.share,
             thanks: tx.receipt.thanks,
             total: tx.receipt.total,
             newSale: s.newSale,

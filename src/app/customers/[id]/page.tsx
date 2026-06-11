@@ -19,18 +19,12 @@ export default async function CustomerProfilePage({
   const { id } = await params;
   const locale = await getCurrentLocale();
   const dict = await getDictionary(locale);
-  const storeName = merchant
-    ? locale === "en" && merchant.store_name_en
-      ? merchant.store_name_en
-      : merchant.store_name
-    : dict.app.name;
 
   return (
     <CustomerView
       id={id}
       merchantId={merchant?.id ?? user.id}
       currency={merchant?.default_currency ?? "SYP"}
-      storeName={storeName}
       locale={locale}
       appName={dict.app.name}
       customers={dict.customers}

@@ -7,6 +7,7 @@ import { customerSchema } from "@/lib/validation/customer";
 import { saveCustomer } from "@/lib/offline/customers-repo";
 import { syncAll } from "@/lib/offline/sync";
 import type { LocalCustomer } from "@/lib/offline/db";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/app/products/product-form.module.css";
 
 type Props = {
@@ -42,6 +43,7 @@ export function CustomerForm({
       name: str(fd, "name"),
       phone: str(fd, "phone"),
       neighborhood: str(fd, "neighborhood"),
+      telegram_chat_id: str(fd, "telegram_chat_id"),
     });
     if (!parsed.success) {
       setError(c.errors.invalid);
@@ -101,8 +103,30 @@ export function CustomerForm({
         />
       </label>
 
+      <label className={styles.label}>
+        {c.fields.telegramChatId}{" "}
+        <span className={styles.muted}>({common.optional})</span>
+        <input
+          className={styles.input}
+          name="telegram_chat_id"
+          dir="ltr"
+          inputMode="numeric"
+          maxLength={40}
+          defaultValue={initial?.telegram_chat_id ?? ""}
+          placeholder="123456789"
+        />
+      </label>
+      <p className={styles.muted}>{c.telegramHint}</p>
+
       <button type="submit" className={styles.submit} disabled={pending}>
-        {pending ? c.saving : c.save}
+        {pending ? (
+          <>
+            <Spinner />
+            {c.saving}
+          </>
+        ) : (
+          c.save
+        )}
       </button>
     </form>
   );

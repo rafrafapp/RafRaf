@@ -7,9 +7,14 @@ import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb, type LocalTransaction, type TxType } from "@/lib/offline/db";
 import { useSync } from "@/lib/offline/useSync";
+import {
+  recordShamCashVoid,
+  VOID_NOTE_PREFIX,
+} from "@/lib/offline/transactions-repo";
 import { safeDisplay } from "@/lib/validation/sanitize";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -60,6 +65,8 @@ export function TransactionsView({
 }: Props) {
   const { online, syncing, sync } = useSync(merchantId);
   const [filter, setFilter] = useState<Filter>("all");
+  const [voidTarget, setVoidTarget] = useState<LocalTransaction | null>(null);
+  const [voiding, setVoiding] = useState(false);
 
   const rows = useLiveQuery(
     () => getDb().transactions.where("merchant_id").equals(merchantId).toArray(),
@@ -67,6 +74,17 @@ export function TransactionsView({
   );
   const loading = rows === undefined;
   const all = rows ?? [];
+
+  // Sham-cash rows that already have a reversing void row (so we hide their
+  // "cancel" button — the ledger is append-only, a void is a separate row).
+  const voidedKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of rows ?? []) {
+      if (t.type === "sham_cash_void" && t.note?.startsWith(VOID_NOTE_PREFIX))
+        set.add(t.note.slice(VOID_NOTE_PREFIX.length));
+    }
+    return set;
+  }, [rows]);
   const types = tx.types as Record<string, string>;
   const providers = tx.mobileCredit.providers as Record<string, string>;
 
@@ -81,7 +99,9 @@ export function TransactionsView({
           : filter === "payment"
             ? t.type === "debt_payment" || t.type === "supplier_payment"
             : filter === "service"
-              ? t.type === "mobile_credit" || t.type === "sham_cash"
+              ? t.type === "mobile_credit" ||
+                t.type === "sham_cash" ||
+                t.type === "sham_cash_void"
               : t.type === filter,
     );
     const groups = new Map<string, LocalTransaction[]>();
@@ -112,7 +132,9 @@ export function TransactionsView({
           ? `📱 ${types.mobile_credit}${t.product_name ? ` · ${providers[t.product_name] ?? t.product_name}` : ""}`
           : t.type === "sham_cash"
             ? `💸 ${types.sham_cash}`
-            : (t.product_name ?? types[t.type]);
+            : t.type === "sham_cash_void"
+              ? `↩️ ${types.sham_cash_void}`
+              : (t.product_name ?? types[t.type]);
       out.push({
         key: t.client_uuid,
         type: t.type,
@@ -226,18 +248,86 @@ export function TransactionsView({
                     </span>
                   </div>
                 </div>
-                <span
-                  className={`${styles.txAmount} ${
-                    INCOME.includes(en.type) ? styles.txIn : styles.txOut
-                  }`}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    gap: "0.3rem",
+                  }}
                 >
-                  {INCOME.includes(en.type) ? "+" : "−"} {nf.format(en.total)}{" "}
-                  {en.currency}
-                </span>
+                  <span
+                    className={`${styles.txAmount} ${
+                      INCOME.includes(en.type) ? styles.txIn : styles.txOut
+                    }`}
+                  >
+                    {INCOME.includes(en.type) ? "+" : "−"} {nf.format(en.total)}{" "}
+                    {en.currency}
+                  </span>
+                  {en.type === "sham_cash" && !voidedKeys.has(en.key) && (
+                    <button
+                      type="button"
+                      className={styles.removeBtn}
+                      onClick={() =>
+                        setVoidTarget(
+                          (rows ?? []).find((t) => t.client_uuid === en.key) ??
+                            null,
+                        )
+                      }
+                    >
+                      {tx.list.cancel}
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
         </>
+      )}
+
+      {voidTarget && (
+        <div className={styles.overlay} role="dialog" aria-modal="true">
+          <div className={styles.confirmBox}>
+            <p className={styles.confirmTitle} style={{ color: "var(--text)" }}>
+              {tx.list.cancelConfirm}
+            </p>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.btnGhost}
+                onClick={() => setVoidTarget(null)}
+                disabled={voiding}
+              >
+                {tx.sell.cancel}
+              </button>
+              <button
+                type="button"
+                className={styles.btnWarn}
+                disabled={voiding}
+                onClick={async () => {
+                  if (!voidTarget) return;
+                  setVoiding(true);
+                  try {
+                    await recordShamCashVoid({ merchantId, original: voidTarget });
+                    void sync();
+                    setVoidTarget(null);
+                  } finally {
+                    setVoiding(false);
+                  }
+                }}
+              >
+                {voiding ? (
+                  <>
+                    <Spinner />
+                    {tx.list.canceling}
+                  </>
+                ) : (
+                  tx.list.cancelYes
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

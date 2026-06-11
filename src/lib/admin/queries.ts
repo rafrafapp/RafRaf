@@ -2,7 +2,6 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isBackupConfigured } from "@/lib/backup/google";
 import { isTelegramConfigured } from "@/lib/messaging/telegram";
-import { isWhatsAppConfigured } from "@/lib/messaging/whatsapp";
 import { parseAllowedIps } from "@/lib/security/admin-ip";
 
 // Cross-tenant reads for the admin dashboard. These use the SERVICE-ROLE client
@@ -328,7 +327,6 @@ export type SystemHealth = {
   backup: boolean;
   masterSheet: boolean;
   telegram: boolean;
-  whatsapp: boolean;
   rateLimit: boolean;
   adminAllowlist: number;
   lastBackupAt: string | null;
@@ -363,7 +361,6 @@ export async function getSystemHealth(): Promise<SystemHealth> {
     backup: isBackupConfigured(),
     masterSheet: !!process.env.RAFRAF_MASTER_SHEET_ID,
     telegram: isTelegramConfigured(),
-    whatsapp: isWhatsAppConfigured(),
     rateLimit: !!process.env.UPSTASH_REDIS_REST_URL,
     adminAllowlist: parseAllowedIps(process.env.ADMIN_ALLOWED_IPS).length,
     lastBackupAt,

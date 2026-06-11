@@ -371,6 +371,46 @@ export async function recordShamCash(opts: {
   await db.transactions.put(tx);
 }
 
+// Marker stored in a void row's note so the UI can tell which sham_cash rows are
+// already cancelled (the ledger is append-only — a void is a reversing row, not a
+// delete). Format: `${VOID_NOTE_PREFIX}${original client_uuid}`.
+export const VOID_NOTE_PREFIX = "void:";
+
+// Cancel/void a Sham Cash transaction: append a reversing money-only row
+// (sham_cash_void) carrying the SAME amounts (total/qty/price/paid ≥ 0, so the
+// DB CHECKs hold) — the reports negate it (reversing revenue, commission and the
+// cash received). Mirrors how a return reverses a sale.
+export async function recordShamCashVoid(opts: {
+  merchantId: string;
+  original: LocalTransaction;
+}): Promise<void> {
+  const o = opts.original;
+  if (o.type !== "sham_cash") throw new Error("not a sham_cash transaction");
+  const db = getDb();
+  const tx: LocalTransaction = {
+    client_uuid: crypto.randomUUID(),
+    id: null,
+    merchant_id: opts.merchantId,
+    type: "sham_cash_void",
+    product_id: null,
+    product_name: o.product_name,
+    qty: o.qty,
+    price: o.price,
+    total: o.total,
+    discount: 0,
+    paid: o.paid,
+    customer_id: null,
+    supplier_id: null,
+    payment: o.payment,
+    currency: o.currency,
+    note: `${VOID_NOTE_PREFIX}${o.client_uuid}`,
+    group_uuid: null,
+    created_at: nowIso(),
+    _sync: "pending",
+  };
+  await db.transactions.put(tx);
+}
+
 // All line items of one invoice (for the grouped receipt view), oldest first.
 export function getInvoiceLines(group: string): Promise<LocalTransaction[]> {
   return getDb()

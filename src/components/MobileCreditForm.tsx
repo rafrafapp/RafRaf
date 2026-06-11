@@ -15,6 +15,7 @@ import {
 } from "@/lib/validation/transaction";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -201,7 +202,14 @@ export function MobileCreditForm({
           onClick={save}
           disabled={saving}
         >
-          {saving ? tx.sell.completing : m.save}
+          {saving ? (
+            <>
+              <Spinner />
+              {tx.sell.completing}
+            </>
+          ) : (
+            m.save
+          )}
         </button>
       </div>
     </main>

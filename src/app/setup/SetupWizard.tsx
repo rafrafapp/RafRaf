@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { createStore, type SetupState } from "@/lib/merchant/actions";
 import { CURRENCIES } from "@/lib/validation/merchant";
+import { Spinner } from "@/components/Spinner";
 import styles from "./setup.module.css";
 
 type Props = {
@@ -95,8 +96,23 @@ export function SetupWizard({ setup, common, businessTypes }: Props) {
         />
       </label>
 
+      <label
+        className={styles.label}
+        style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}
+      >
+        <input type="checkbox" name="offers_mobile_credit" defaultChecked />
+        {setup.offersMobileCredit}
+      </label>
+
       <button type="submit" className={styles.submit} disabled={pending}>
-        {setup.submit}
+        {pending ? (
+          <>
+            <Spinner />
+            {setup.submit}
+          </>
+        ) : (
+          setup.submit
+        )}
       </button>
     </form>
   );

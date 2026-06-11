@@ -173,6 +173,14 @@ export function computeReport(opts: {
         cashIn += paid;
         break;
       }
+      case "sham_cash_void": {
+        // Reversal of a sham_cash row: negate its revenue, commission and the cash
+        // that was received (money goes back out).
+        serviceRevenue -= total;
+        serviceIncome -= total - qty * price;
+        cashOut += paid;
+        break;
+      }
     }
   }
 

@@ -68,7 +68,8 @@ export type TxType =
   | "debt_payment" // customer pays down their debt (Phase 5)
   | "supplier_payment" // store pays a supplier (Phase 5)
   | "mobile_credit" // phone-credit sale (وحدات) — service income, no stock
-  | "sham_cash"; // Sham Cash transfer (شام كاش) — service income, no stock
+  | "sham_cash" // Sham Cash transfer (شام كاش) — service income, no stock
+  | "sham_cash_void"; // reversal/cancel of a sham_cash row (money-only)
 
 export type PaymentMethod = "cash" | "credit" | "partial";
 
@@ -110,6 +111,7 @@ export interface LocalCustomer {
   name: string;
   phone: string | null;
   neighborhood: string | null;
+  telegram_chat_id: string | null; // optional — enables Telegram debt reminders
   debt_balance: number; // server-authoritative (+ = owes the store)
   created_at: string;
   updated_at: string;

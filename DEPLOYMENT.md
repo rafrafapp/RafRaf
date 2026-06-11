@@ -2,7 +2,7 @@
 
 This is the end‑to‑end guide to ship RafRaf to production. Frontend + API run on
 **Vercel**; database, auth and realtime are **Supabase**. Everything else
-(Google Sheets backup, Telegram/WhatsApp, Upstash, Cloudinary, Resend, Anthropic)
+(Google Sheets backup, Telegram, Upstash, Cloudinary, Resend, Anthropic)
 is **optional** — each feature is a no‑op until its env vars are set, so you can
 launch with only the core and add the rest later.
 
@@ -75,7 +75,7 @@ update merchants set role = 'superadmin' where id = '<your-auth-uid>';
 ### 1.7 (Optional) Low‑stock Database Webhook
 Database → Webhooks → on `products` **UPDATE** → POST to
 `https://<your-domain>/api/webhooks/low-stock` with header
-`x-webhook-secret: <WHATSAPP_WEBHOOK_SECRET>`.
+`x-webhook-secret: <LOW_STOCK_WEBHOOK_SECRET>`.
 
 ---
 
@@ -84,8 +84,7 @@ Database → Webhooks → on `products` **UPDATE** → POST to
 | Service | What it powers | Setup |
 |---|---|---|
 | **Google Sheets/Drive** | Nightly backups (`/api/cron/*`) | Create a service account; create the master sheet manually and share it (Editor) with the SA email; `node scripts/create-master-sheet.mjs` to verify. Consumer SAs have **0 Drive storage** — use a Shared Drive (`RAFRAF_SHARED_DRIVE_ID`) for per‑merchant auto‑sheets. |
-| **Telegram** (primary alerts) | Merchant + admin notifications | Create a bot via @BotFather; set the env vars; after deploy run `node scripts/set-telegram-webhook.mjs`. See `docs/telegram-bot-setup.md`. |
-| **WhatsApp** (Green API) | Customer debt reminders, fallback | Optional. Set `GREEN_API_*`. |
+| **Telegram** (all alerts) | Merchant + admin notifications, customer debt reminders | Create a bot via @BotFather; set the env vars; after deploy run `node scripts/set-telegram-webhook.mjs`. See `docs/telegram-bot-setup.md`. |
 | **Upstash Redis** | Rate limiting (login, AI gate, `/api/v1`) | Create a Redis DB; copy the REST URL + token. Fail‑open until set. |
 | **Cloudinary** | Product images + store logo | Optional, signed uploads. See `docs/cloudinary-setup.md`. |
 | **Resend** | Welcome email + Supabase auth SMTP | Verify a sending domain. |
@@ -155,11 +154,7 @@ the browser. Template: `.env.example`.
 | `TELEGRAM_WEBHOOK_SECRET` | Optional | Secret echoed by Telegram to `/api/telegram/webhook`. |
 | `RAFRAF_ADMIN_CHAT_ID` | Optional | Admin Telegram chat id (failure alerts). |
 | `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | Optional | Bot username (no `@`) for the Settings "open bot" link. |
-| `GREEN_API_ID_INSTANCE` | Optional | WhatsApp (Green API) instance id. |
-| `GREEN_API_TOKEN` | Optional | WhatsApp (Green API) token. |
-| `GREEN_API_BASE_URL` | Optional | Green API host override (defaults to api.green-api.com). |
-| `RAFRAF_ADMIN_PHONE` | Optional | Admin WhatsApp number (no `+`) — alert fallback. |
-| `WHATSAPP_WEBHOOK_SECRET` | Optional | Header secret for the low‑stock DB webhook. |
+| `LOW_STOCK_WEBHOOK_SECRET` | Optional | Header secret for the low‑stock DB webhook. |
 | `UPSTASH_REDIS_REST_URL` | Optional | Upstash REST URL (rate limiting). |
 | `UPSTASH_REDIS_REST_TOKEN` | Optional | Upstash REST token. |
 | `RESEND_API_KEY` | Optional | Resend API key (welcome email + auth SMTP password). |

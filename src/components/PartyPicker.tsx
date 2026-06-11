@@ -81,7 +81,7 @@ export function PartyPicker({ merchantId, kind, value, onChange, labels }: Props
           ? await saveCustomer({
               mode: "create",
               merchantId,
-              data: { name, phone: null, neighborhood: null },
+              data: { name, phone: null, neighborhood: null, telegram_chat_id: null },
             })
           : await saveSupplier({
               mode: "create",

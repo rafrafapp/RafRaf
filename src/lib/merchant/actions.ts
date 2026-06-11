@@ -48,6 +48,7 @@ export async function createStore(
     default_currency: parsed.data.default_currency,
     phone: parsed.data.phone ?? null,
     logo_url: parsed.data.logo_url ?? null,
+    offers_mobile_credit: formData.get("offers_mobile_credit") === "on",
     last_active: new Date().toISOString(),
   });
 
@@ -121,6 +122,7 @@ export async function updateNotificationSettings(
     .update({
       notify_channel: parsed.data.notify_channel,
       telegram_chat_id: parsed.data.telegram_chat_id,
+      offers_mobile_credit: formData.get("offers_mobile_credit") === "on",
     })
     .eq("id", user.id);
   if (error) return { error: "failed" };

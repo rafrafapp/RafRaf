@@ -5,10 +5,15 @@ import Link from "next/link";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { NOTIFY_CHANNELS } from "@/lib/validation/merchant";
 import { updateNotificationSettings } from "@/lib/merchant/actions";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/app/products/product-form.module.css";
 
 type Props = {
-  initial: { notify_channel: string; telegram_chat_id: string };
+  initial: {
+    notify_channel: string;
+    telegram_chat_id: string;
+    offers_mobile_credit: boolean;
+  };
   settings: Dictionary["settings"];
   common: Dictionary["common"];
   botUsername: string | null;
@@ -87,8 +92,27 @@ export function SettingsForm({ initial, settings: s, common, botUsername }: Prop
         />
       )}
 
+      <label
+        className={styles.label}
+        style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}
+      >
+        <input
+          type="checkbox"
+          name="offers_mobile_credit"
+          defaultChecked={initial.offers_mobile_credit}
+        />
+        {s.offersMobileCredit}
+      </label>
+
       <button type="submit" className={styles.submit} disabled={pending}>
-        {pending ? s.saving : s.save}
+        {pending ? (
+          <>
+            <Spinner />
+            {s.saving}
+          </>
+        ) : (
+          s.save
+        )}
       </button>
 
       <Link href="/dashboard" className={styles.back}>

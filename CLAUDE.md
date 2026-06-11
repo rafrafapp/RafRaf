@@ -40,7 +40,7 @@ The full product/security/build specs live in:
 | Validation   | zod (on every write)                            |
 | Rate limit   | `@upstash/ratelimit` + `@upstash/redis`         |
 | Backup       | `googleapis` (Sheets + Drive) via service acct  |
-| Messaging    | Green API (WhatsApp)                            |
+| Messaging    | Telegram Bot API (only channel)                 |
 | Email        | Resend (API for welcome; SMTP for Supabase auth mail) |
 | Images       | Cloudinary — signed uploads; WebP/optimize/resize at delivery |
 | AI (Phase 12)| Anthropic Claude API — **placeholder/stub**, smart-plan gated |
@@ -186,7 +186,7 @@ npm run typecheck  # tsc --noEmit
 `.env.example` is the committed template. Public Supabase URL + anon key are filled
 in. **`SUPABASE_SERVICE_ROLE_KEY` is a placeholder** — paste it from
 Supabase Dashboard → Project Settings → API before any server/admin/backup work.
-All Google/WhatsApp/Upstash/admin-IP vars are placeholders for their respective phases.
+All Google/Telegram/Upstash/admin-IP vars are placeholders for their respective phases.
 
 Supabase project ref: `yepxrcoobtjlyjbvvloh` (connected via MCP).
 
@@ -201,8 +201,13 @@ Migrations are applied via the Supabase MCP (`apply_migration`). Tables so far:
   session. RLS enabled; policies `merchant_select_own` / `_insert_own` /
   `_update_own` all key on `id = auth.uid()`. No DELETE policy (default deny).
   Also carries `google_sheet_id`/`_url` (Phase 7 backup) and
-  `notify_channel` (`telegram`|`whatsapp`|`off`, CHECK) + `telegram_chat_id`
-  (Phase 8 notifications) — the owner edits the latter via Settings.
+  `notify_channel` (`telegram`|`off`, CHECK) + `telegram_chat_id`
+  (Phase 8 notifications) — the owner edits the latter via Settings — and
+  `offers_mobile_credit boolean` (default true; gates the dashboard وحدات button,
+  set in setup + Settings). `business_type` is validated dynamically against
+  `business_types` (the old value-locked CHECK that hard-coded the original 5 was
+  dropped — it silently broke setup for admin-added types; a format-only
+  `^[a-z0-9_-]+$` CHECK remains).
 - **`products`** — per-merchant inventory (`merchant_id` FK → `merchants.id`,
   `on delete cascade`). Prices/stock are `NUMERIC` with `>= 0` CHECKs;
   `custom_fields JSONB` holds business-type-specific fields. RLS enabled; the
@@ -231,7 +236,9 @@ Migrations are applied via the Supabase MCP (`apply_migration`). Tables so far:
   `customer_id`/`supplier_id` → `customers`/`suppliers` (`on delete set null`).
   ⚠️ A new ledger type must be added in **two** places that are easy to desync:
   the table's `transactions_type_check` CHECK **and** the RPC's internal
-  `p_type NOT IN (...)` guard (all **nine** types live in both now).
+  `p_type NOT IN (...)` guard (all **ten** types live in both now — including
+  `sham_cash_void`, the money-only reversal that cancels a `sham_cash` row; the
+  reports negate it).
   The RPC now **atomically moves the party balance** too (idempotency check runs
   *before* any stock/debt side-effect, so a retried sync never double-counts):
   `sell`/`buy` add the unpaid remainder to `debt_balance`/`balance_owed`, returns
@@ -431,7 +438,7 @@ boundary** (`merchant_id = auth.uid()`), with zod validating on the client.
 > Phase 5 UI mirrors products: `/customers` + `/suppliers` list views (live Dexie
 > reads, debt/owed totals), `/{customers,suppliers}/new` forms, and
 > `/{customers,suppliers}/[id]` profiles (balance, debt **aging**, record-payment
-> modal, `wa.me` reminder, statement, edit, delete). `components/PartyPicker.tsx`
+> modal, Telegram debt reminder, statement, edit, delete). `components/PartyPicker.tsx`
 > (search + quick-add by name) links a customer to `/sell` and a supplier to
 > `/buy` (with payment method + "paid now" for credit/partial); returns link the
 > matching party.
@@ -455,8 +462,8 @@ Cross-tenant reads go through the service-role admin client.
   Revenue Tracker) by overwrite (idempotent).
 - **Cron** (`app/api/cron/{backup,master,keepalive}/route.ts`, `runtime=nodejs`):
   GET gated by `authorizeCron` (Bearer `CRON_SECRET`); `vercel.json` schedules
-  02:00 / 03:00 / every-5-days UTC. Every run writes `backup_logs`; WhatsApp
-  failure alerts arrive in Phase 8.
+  02:00 / 03:00 / every-5-days UTC. Every run writes `backup_logs`; failure
+  alerts go to the admin's Telegram (Phase 8).
 
 > ⚠️ **Service-account Drive limit:** a *consumer* (non-Workspace) service account
 > has **0 Drive storage**, so it CANNOT create spreadsheets (403 "caller does not
@@ -468,37 +475,38 @@ Cross-tenant reads go through the service-role admin client.
 > otherwise it degrades to null and the master sheet — which already holds every
 > merchant's products + transactions — is the complete backup.
 
-## Messaging (Phase 8 — Telegram primary, WhatsApp secondary)
+## Messaging (Phase 8 — Telegram only)
 
-Multi-channel, server-only (`lib/messaging/*`, every file `import "server-only"`).
-Each merchant picks a channel in **Settings → Notifications** — `notify_channel`
-= `telegram` | `whatsapp` | `off` (default `telegram`), with `telegram_chat_id`.
-`dispatch.ts` routes: `notifyMerchant(merchant, text)` → the merchant's channel;
-`notifyAdmin(text)` → Telegram (`RAFRAF_ADMIN_CHAT_ID`) then WhatsApp fallback.
+Server-only (`lib/messaging/*`, every file `import "server-only"`). **Telegram is
+the only channel — WhatsApp/Green API was removed.** Each merchant sets it up in
+**Settings → Notifications** — `notify_channel` = `telegram` | `off` (default
+`telegram`, CHECK), with `telegram_chat_id`. `dispatch.ts`:
+`notifyMerchant(merchant, text)` → Telegram (no-op if `off` or no chat id);
+`notifyAdmin(text)` → the admin's Telegram (`RAFRAF_ADMIN_CHAT_ID`).
 
-- **Telegram** (`telegram.ts`, PRIMARY — free, no approval): `sendTelegram(chatId,
-  text)`. `app/api/telegram/webhook` replies to `/start` with the chat id so a
-  merchant self-serves it into Settings. Register once with
+- **Telegram** (`telegram.ts` — free, no approval): `sendTelegram(chatId, text)`.
+  `app/api/telegram/webhook` replies to `/start` with the chat id so a merchant
+  self-serves it into Settings. Register once with
   `scripts/set-telegram-webhook.mjs`; full guide in `docs/telegram-bot-setup.md`.
-- **WhatsApp** (`whatsapp.ts`, SECONDARY — Green API): `sendWhatsApp(phone, text)`.
-- **Templates** (`messages.ts`, short Arabic) + **`summary.ts`** are
-  channel-agnostic (COGS from current `cost_price`, like the reports).
+- **Templates** (`messages.ts`, short Arabic) + **`summary.ts`** (COGS from
+  current `cost_price`, like the reports).
 - **Nightly summary** — `app/api/cron/notify` (CRON_SECRET, 05:00 UTC): each
-  merchant gets yesterday's summary on their channel.
+  merchant gets yesterday's summary on Telegram (unless `off`).
 - **Instant low-stock** — `app/api/webhooks/low-stock` (Supabase DB webhook on
-  products UPDATE, header `x-webhook-secret`): alerts on the downward crossing,
-  on the merchant's channel (stock moves via the RPC on sync).
-- **Owner-triggered debt reminder** — `lib/messaging/actions.ts sendDebtReminder`
-  (RLS-scoped). Customer-facing, so it uses **WhatsApp** (a phone); the Phase 5
-  `wa.me` button is the no-creds manual fallback. Telegram can't message an
-  arbitrary customer (they'd have to start the bot), so it isn't used here.
+  products UPDATE, header `x-webhook-secret` = `LOW_STOCK_WEBHOOK_SECRET`): alerts
+  on the downward crossing, over Telegram (stock moves via the RPC on sync).
+- **Owner-triggered customer debt reminder** — `lib/messaging/actions.ts
+  sendDebtReminder` (RLS-scoped) sends to the **customer's** Telegram. The owner
+  links it by pasting the customer's chat id (from the bot's `/start`) into the
+  customer profile (`customers.telegram_chat_id`); with no chat id the UI shows
+  «الزبون ما عنده تيليغرام مربوط».
 - **Backup-failure admin alert** — master/backup crons call `notifyAdmin`.
 
 > Setup (`docs/telegram-bot-setup.md`): `TELEGRAM_BOT_TOKEN`,
 > `TELEGRAM_WEBHOOK_SECRET`, `RAFRAF_ADMIN_CHAT_ID`,
-> `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`; WhatsApp (`GREEN_API_*`) optional. **No new
-> table** — `merchants` gained `notify_channel` + `telegram_chat_id` (advisors
-> clean). Crons + webhook fire once deployed.
+> `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`. `merchants` carries `notify_channel` +
+> `telegram_chat_id`; `customers` gained `telegram_chat_id` (advisors clean).
+> Crons + webhook fire once deployed.
 
 ## Security hardening (Phase 9 — the seven layers)
 
@@ -525,8 +533,9 @@ See `rafraf_security.md`. State of the layers:
   validate client-side / offline). ⚠️ **Nothing reachable from `middleware.ts` may
   import `sanitize-html`** — isomorphic-dompurify throws in Edge (`reading 'bind'`).
   The live Edge chain is middleware→`security/events`→`messaging/dispatch`→
-  `messaging/whatsapp`→`validation/customer`, and `customer.ts` needs only the regex
-  module. Schemas reject tags (`NO_TAGS`) + run free-text through `sanitizeString`;
+  `messaging/telegram` (`telegram.ts` is fetch-only); `sanitize.ts` stays
+  regex-only so any Edge-reachable validation file can import it safely.
+  Schemas reject tags (`NO_TAGS`) + run free-text through `sanitizeString`;
   DB CHECK constraints reject `<…>`; the raw-HTML sinks (`Receipt`, `ReportsView`
   PDF) use `escapeHtml(sanitizeString())`; list views use `safeDisplay()`. Layers:
   zod/whitelist → DOMPurify → DB CHECK → React escape.
@@ -594,7 +603,7 @@ pattern as the Phase 7 backups.
   debt/owed), `listMerchants`/`getMerchant`/`getMerchantDetail`, `getBackupStatuses`
   (latest per-merchant `backup_logs` + failures), `getSecurityLogs`/`getAdminLogs`,
   `getSystemHealth` (DB ping + config presence: Google/master sheet/Telegram/
-  WhatsApp/Upstash/allowlist + last backup).
+  Upstash/allowlist + last backup).
 - **Actions.** `app/rafraf-admin/actions.ts` (`"use server"`, each re-verifies
   superadmin + writes `admin_logs`): `changePlan`, `updateBilling` (mark-paid +
   notes, sanitized), `startImpersonation`/`stopImpersonation`, `runMerchantBackup`/
@@ -729,8 +738,10 @@ accounts).
 RPCs (atomic stock + ledger, idempotent on `client_uuid`, `SECURITY INVOKER`,
 advisors clean). Offline-first like Phase 3 (Dexie `transactions` store v2,
 `transactions-repo`, `syncAll`/`useSync`). UI: **quick sell** at `/sell`
-(scan/search → multi-item cart → discount/payment → **soft-block Arabic confirm
-when stock ≤ 0** → record with `group_uuid` → printable + `wa.me` receipt);
+(scan/search → multi-item cart → discount/payment → **soft-block confirm at
+completion if any line oversells** («المخزون فاضي — متأكد من إتمام البيع؟»),
+checked against current stock so it catches scan/quick-add/qty-edit → record with
+`group_uuid` → printable + shareable receipt);
 `/buy` (stock-in), `/returns` (customer/supplier), `/expenses` (categorized),
 `/transactions` history (live, type filters, grouped invoices); dashboard CTAs +
 all routes protected. Build passes, typecheck + security advisors clean. **Test:**
@@ -748,15 +759,15 @@ only). Offline-first like Phase 3/4 (Dexie v3 `customers`/`suppliers` stores,
 `customers-repo`/`suppliers-repo`, party push/pull in `syncAll`, balance always
 taken from server). UI: `/customers` + `/suppliers` lists (debt/owed totals,
 search), `/{…}/new` forms, `/{…}/[id]` profiles (balance, **debt aging**,
-record-payment full/partial, `wa.me` reminder, statement, edit, delete);
+record-payment full/partial, Telegram debt reminder, statement, edit, delete);
 **sell-on-credit** (customer + "paid now" in `/sell`, soft hint if credit w/o a
 customer), supplier-on-credit + payment method in `/buy`, party links on
 `/returns`; `debt_payment`/`supplier_payment` rows show in `/transactions` (new
 "payments" filter); dashboard CTAs + routes protected. Build passes, typecheck +
 security advisors clean. **Test:** sell on credit to a customer → their debt
 rises; record a partial/full payment → it falls (+ a `debt_payment` row); buy on
-credit from a supplier → balance owed rises, pay it down; WhatsApp reminder
-opens; offline → record → reconnect → balances reconcile (no double-count).
+credit from a supplier → balance owed rises, pay it down; offline → record →
+reconnect → balances reconcile (no double-count).
 **Still pending:** two-account RLS isolation test (needs two real accounts).
 
 **Phase 6 — DONE (code):** reports at `/reports` — **no DB changes**, pure
@@ -790,19 +801,19 @@ so it can't create sheets — code degrades gracefully + supports a Shared Drive
 Deploy to Vercel for the schedules to fire. Two-account RLS isolation test still
 pending.
 
-**Phase 8 — DONE (code):** notifications — **Telegram primary, WhatsApp
-secondary**, merchant-selectable in Settings (see **Messaging** above). Migration
-added `merchants.notify_channel` + `telegram_chat_id` (advisors clean). Channel
-abstraction `lib/messaging/*` (`telegram.ts`, `whatsapp.ts`, `dispatch.ts`,
-`messages.ts`, `summary.ts`, `actions.ts`); nightly summary cron (`/api/cron/
-notify`), low-stock webhook, Telegram bot webhook (`/start` → chat id),
-owner-triggered debt reminder, backup-failure admin alerts; `/settings` page +
-`updateNotificationSettings` action; `scripts/set-telegram-webhook.mjs` +
-`docs/telegram-bot-setup.md`. Build + typecheck clean. **Pending (user/manual):**
-create the bot (@BotFather) → set `TELEGRAM_BOT_TOKEN` etc., deploy, run the
-set-webhook script, connect each merchant's chat id in Settings; (optional) wire
-the Supabase low-stock webhook; WhatsApp `GREEN_API_*` optional. Two-account RLS
-isolation test still pending.
+**Phase 8 — DONE (code):** notifications — **Telegram only** (WhatsApp/Green API
+was later removed), set up in Settings (see **Messaging** above). Migration added
+`merchants.notify_channel` + `telegram_chat_id` (advisors clean). `lib/messaging/*`
+(`telegram.ts`, `dispatch.ts`, `messages.ts`, `summary.ts`, `actions.ts`); nightly
+summary cron (`/api/cron/notify`), low-stock webhook, Telegram bot webhook
+(`/start` → chat id), owner-triggered customer debt reminder (to the customer's
+Telegram, via `customers.telegram_chat_id`), backup-failure admin alerts;
+`/settings` page + `updateNotificationSettings` action;
+`scripts/set-telegram-webhook.mjs` + `docs/telegram-bot-setup.md`. Build +
+typecheck clean. **Pending (user/manual):** create the bot (@BotFather) → set
+`TELEGRAM_BOT_TOKEN` etc., deploy, run the set-webhook script, connect each
+merchant's chat id in Settings; (optional) wire the Supabase low-stock webhook.
+Two-account RLS isolation test still pending.
 
 **Phase 9 — DONE (code):** security hardening — see **Security hardening** above.
 `security_logs` table (advisors clean). **Strict nonce CSP** (prod) via middleware

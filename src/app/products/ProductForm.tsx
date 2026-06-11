@@ -24,6 +24,7 @@ import {
   validateImage,
   PRODUCT_IMAGE_SIZE,
 } from "@/lib/cloudinary/upload-client";
+import { Spinner } from "@/components/Spinner";
 import styles from "./product-form.module.css";
 
 // The camera + decoder bundle is heavy and browser-only; load it lazily, only
@@ -444,7 +445,14 @@ export function ProductForm({
       </label>
 
       <button type="submit" className={styles.submit} disabled={pending}>
-        {pending ? products.saving : products.save}
+        {pending ? (
+          <>
+            <Spinner />
+            {products.saving}
+          </>
+        ) : (
+          products.save
+        )}
       </button>
 
       {scanning && (

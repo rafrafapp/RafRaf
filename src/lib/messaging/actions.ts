@@ -1,21 +1,21 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { isWhatsAppConfigured, sendWhatsApp } from "./whatsapp";
+import { isTelegramConfigured, sendTelegram } from "./telegram";
 import { debtReminderMessage } from "./messages";
 
 export type ReminderResult = { ok: true } | { error: string };
 
-// Owner-triggered debt reminder to a CUSTOMER. Customers are reached by phone, so
-// this uses WhatsApp (Telegram can't message an arbitrary customer — it needs the
-// customer to have started the bot). The wa.me link in the UI is the
-// no-credentials manual fallback. The customer is read through the RLS-scoped
-// server client, so a merchant can only message a customer that belongs to them,
-// and the phone/amount come from the DB — never the client.
+// Owner-triggered debt reminder to a CUSTOMER, sent over Telegram. The customer
+// must have linked their Telegram (the owner pastes the customer's chat id into
+// the profile — they get it by sending /start to the store's bot). The customer
+// is read through the RLS-scoped server client, so a merchant can only message a
+// customer that belongs to them, and the chat id / amount come from the DB —
+// never the client.
 export async function sendDebtReminder(
   customerId: string,
 ): Promise<ReminderResult> {
-  if (!isWhatsAppConfigured()) return { error: "not_configured" };
+  if (!isTelegramConfigured()) return { error: "not_configured" };
 
   const supabase = await createClient();
   const {
@@ -25,11 +25,11 @@ export async function sendDebtReminder(
 
   const { data: c } = await supabase
     .from("customers")
-    .select("name,phone,debt_balance")
+    .select("name,telegram_chat_id,debt_balance")
     .eq("id", customerId)
     .single();
   if (!c) return { error: "not_found" };
-  if (!c.phone) return { error: "no_phone" };
+  if (!c.telegram_chat_id) return { error: "no_telegram" };
   if (Number(c.debt_balance) <= 0) return { error: "no_debt" };
 
   const { data: m } = await supabase
@@ -38,8 +38,8 @@ export async function sendDebtReminder(
     .eq("id", user.id)
     .single();
 
-  const ok = await sendWhatsApp(
-    c.phone,
+  const ok = await sendTelegram(
+    c.telegram_chat_id,
     debtReminderMessage({
       name: c.name,
       storeName: m?.store_name ?? "RafRaf",

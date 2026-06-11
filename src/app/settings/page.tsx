@@ -46,6 +46,7 @@ export default async function SettingsPage() {
           initial={{
             notify_channel: merchant.notify_channel ?? "telegram",
             telegram_chat_id: merchant.telegram_chat_id ?? "",
+            offers_mobile_credit: merchant.offers_mobile_credit ?? true,
           }}
           settings={dict.settings}
           common={dict.common}

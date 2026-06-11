@@ -5,6 +5,7 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 import { changePassword } from "@/lib/auth/actions";
 import { checkPassword } from "@/lib/validation/password";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/app/products/product-form.module.css";
 
 type Props = {
@@ -100,7 +101,14 @@ export function PasswordChangeForm({
         className={styles.submit}
         disabled={pending || !strength.acceptable || mismatch}
       >
-        {pending ? s.saving : s.save}
+        {pending ? (
+          <>
+            <Spinner />
+            {s.saving}
+          </>
+        ) : (
+          s.save
+        )}
       </button>
     </form>
   );

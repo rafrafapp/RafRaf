@@ -7,6 +7,7 @@ import { supplierSchema } from "@/lib/validation/customer";
 import { saveSupplier } from "@/lib/offline/suppliers-repo";
 import { syncAll } from "@/lib/offline/sync";
 import type { LocalSupplier } from "@/lib/offline/db";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/app/products/product-form.module.css";
 
 type Props = {
@@ -102,7 +103,14 @@ export function SupplierForm({
       </label>
 
       <button type="submit" className={styles.submit} disabled={pending}>
-        {pending ? s.saving : s.save}
+        {pending ? (
+          <>
+            <Spinner />
+            {s.saving}
+          </>
+        ) : (
+          s.save
+        )}
       </button>
     </form>
   );

@@ -8,6 +8,7 @@ import {
   toggleBusinessType,
   deleteBusinessType,
 } from "./actions";
+import { Spinner } from "@/components/Spinner";
 import admin from "../rafraf-admin.module.css";
 import bt from "./business-types.module.css";
 
@@ -169,7 +170,9 @@ export function BusinessTypesManager({
                 disabled={!!form.id || pending}
                 placeholder="e.g. bakery"
                 onChange={(e) =>
-                  patch({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })
+                  patch({
+                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""),
+                  })
                 }
               />
             </div>
@@ -299,7 +302,14 @@ export function BusinessTypesManager({
               disabled={pending}
               onClick={onSave}
             >
-              {pending ? labels.saving : labels.save}
+              {pending ? (
+                <>
+                  <Spinner />
+                  {labels.saving}
+                </>
+              ) : (
+                labels.save
+              )}
             </button>
             <button
               type="button"

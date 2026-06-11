@@ -23,6 +23,7 @@ export type Merchant = {
   google_sheet_url: string | null;
   notify_channel: string | null;
   telegram_chat_id: string | null;
+  offers_mobile_credit: boolean;
   last_active: string | null;
   created_at: string;
 };

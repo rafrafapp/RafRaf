@@ -12,6 +12,7 @@ import {
 import { MIN_PASSWORD_LENGTH } from "@/lib/validation/auth";
 import { checkPassword } from "@/lib/validation/password";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { Spinner } from "@/components/Spinner";
 import styles from "./login.module.css";
 
 type Props = {
@@ -159,6 +160,7 @@ export function LoginForm({ auth, password: pwLabels, urlError }: Props) {
           className={styles.submit}
           disabled={pending || blockSignUp}
         >
+          {pending && <Spinner />}
           {isSignIn ? auth.signInButton : auth.signUpButton}
         </button>
       </form>

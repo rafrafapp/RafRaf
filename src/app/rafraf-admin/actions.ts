@@ -169,7 +169,7 @@ export async function runMasterUpdate(): Promise<ActionResult> {
 
 export async function broadcast(
   messageRaw: string,
-  channel: "all" | "telegram" | "whatsapp",
+  channel: "all" | "telegram",
 ): Promise<ActionResult> {
   const admin = await requireSuperadmin();
   const message = sanitizeString(messageRaw).slice(0, 1000);
@@ -177,7 +177,7 @@ export async function broadcast(
 
   const { data } = await createAdminClient()
     .from("merchants")
-    .select("notify_channel,telegram_chat_id,phone");
+    .select("notify_channel,telegram_chat_id");
   const merchants = data ?? [];
 
   let sent = 0;
