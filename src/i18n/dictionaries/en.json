@@ -40,15 +40,17 @@
       "invalid_input": "Check your email and password.",
       "invalid_credentials": "Incorrect email or password.",
       "email_not_confirmed": "Confirm your email first via the link we sent.",
-      "weak_password": "Password too short — at least 12 characters.",
+      "weak_password": "Password is too weak.",
       "email_in_use": "This email is already registered.",
       "signup_failed": "Could not create the account. Please try again.",
+      "rate_limited": "Please try again in a moment.",
+      "email_send_failed": "We couldn't send the confirmation email right now. Please sign in with Google for now.",
       "oauth": "Could not sign in with Google.",
       "confirm": "Could not confirm your email. The link is expired or invalid.",
       "locked": "Account temporarily locked after too many attempts. Try again in 15 minutes."
     },
     "notices": {
-      "check_email": "We sent a confirmation link to your email. Open it to finish signing up."
+      "check_email": "Account created! Check your email to confirm your account."
     }
   },
   "forgotPassword": {
@@ -885,11 +887,11 @@
       "title": "Choose the plan that fits your growth",
       "subtitle": "Pricing for everyone, from the small shop to large companies.",
       "popular": "Most popular",
-      "perFree": "/ forever",
-      "perMonth": "/ month",
-      "free": { "name": "Free", "price": "$0", "f1": "Up to 200 products", "f2": "Basic inventory", "f3": "Offline sales", "cta": "Start now" },
-      "basic": { "name": "Basic plan", "price": "$8", "f1": "Unlimited products", "f2": "Advanced debt system", "f3": "Detailed financial reports", "f4": "24/7 support", "cta": "Try free" },
-      "smart": { "name": "Smart plan", "price": "$20", "f1": "Everything in Basic", "f2": "AI forecasts", "f3": "API access", "f4": "E-commerce integration", "cta": "Contact us" }
+      "perFree": "",
+      "perMonth": "",
+      "free": { "name": "Free", "price": "Contact us", "f1": "Up to 200 products", "f2": "Basic inventory", "f3": "Offline sales", "cta": "Start now" },
+      "basic": { "name": "Basic plan", "price": "Contact us", "f1": "Unlimited products", "f2": "Advanced debt system", "f3": "Detailed financial reports", "f4": "24/7 support", "cta": "Try free" },
+      "smart": { "name": "Smart plan", "price": "Contact us", "f1": "Everything in Basic", "f2": "AI forecasts", "f3": "API access", "f4": "E-commerce integration", "cta": "Contact us" }
     },
     "devSection": {
       "title": "Built for developers too",

@@ -96,7 +96,32 @@ export async function signUpWithPassword(
   });
 
   if (error) {
-    if (error.code === "weak_password") return { error: "weak_password" };
+    // Surface the real cause in the server logs — the client only ever gets an
+    // i18n code (so we don't leak internals or which field was wrong).
+    console.error("[signup] Supabase auth error:", {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+    });
+    const code = error.code ?? "";
+    const msg = (error.message ?? "").toLowerCase();
+    if (code === "weak_password") return { error: "weak_password" };
+    if (code === "user_already_exists" || code === "email_exists")
+      return { error: "email_in_use" };
+    if (error.status === 429 || code.includes("rate_limit") || msg.includes("rate limit"))
+      return { error: "rate_limited" };
+    // Email confirmation is ON but Supabase couldn't send the email (no SMTP
+    // configured, or the built-in mailer is rate-limited/failing) — the most
+    // common cause of an otherwise-mysterious signup failure. Tell the merchant
+    // to use Google sign-in for now.
+    if (
+      code === "unexpected_failure" ||
+      code === "email_provider_error" ||
+      msg.includes("error sending") ||
+      msg.includes("confirmation email") ||
+      msg.includes("sending confirmation")
+    )
+      return { error: "email_send_failed" };
     return { error: "signup_failed" };
   }
 
