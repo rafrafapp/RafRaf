@@ -31,7 +31,13 @@ type Props = {
   tx: Dictionary["transactions"];
   common: Dictionary["common"];
   syncLabels: Dictionary["products"]["sync"];
-  scanLabels: { title: string; hint: string; error: string; close: string };
+  scanLabels: {
+    title: string;
+    hint: string;
+    error: string;
+    close: string;
+    upload: string;
+  };
 };
 
 // Product-based ledger entry: a purchase (stock in) or a return

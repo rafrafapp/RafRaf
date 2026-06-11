@@ -467,6 +467,7 @@ export function ProductForm({
             hint: products.scanHint,
             error: products.scanError,
             close: products.scanClose,
+            upload: products.scanUpload,
           }}
         />
       )}

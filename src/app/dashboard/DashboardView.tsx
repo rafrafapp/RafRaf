@@ -25,7 +25,6 @@ import {
   IconHistory,
   IconChart,
   IconPhone,
-  IconExchange,
   IconWarning,
   IconAlert,
   IconPlus,
@@ -62,7 +61,6 @@ const ACTIONS: { href: string; label: ActionLabel; Icon: IconComp; color: ColorC
   { href: "/transactions", label: "transactions", Icon: IconHistory, color: "cPrimary" },
   { href: "/reports", label: "reports", Icon: IconChart, color: "cSecondary" },
   { href: "/mobile-credit", label: "mobileCredit", Icon: IconPhone, color: "cPrimary" },
-  { href: "/sham-cash", label: "shamCash", Icon: IconExchange, color: "cSecondary" },
 ];
 
 // Income (+, green) vs outflow (−, red) for the recent-activity amounts.

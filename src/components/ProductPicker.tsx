@@ -25,7 +25,13 @@ type Props = {
     noProducts: string;
     available: string;
   };
-  scanLabels: { title: string; hint: string; error: string; close: string };
+  scanLabels: {
+    title: string;
+    hint: string;
+    error: string;
+    close: string;
+    upload: string;
+  };
 };
 
 // Search the local (offline) product catalogue and/or scan a barcode, then hand

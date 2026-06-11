@@ -715,8 +715,12 @@ list at `/products` (search by name/name_en/barcode, category filter, 20/page
 pagination, low-stock & out-of-stock badges); add/edit at `/products/new` and
 `/products/[id]/edit` with a shared `ProductForm` whose **custom fields adapt to
 `business_type`** (config in `lib/validation/product.ts` → `custom_fields` JSONB);
-camera **barcode scanning** via `@zxing/browser` (reusable `components/BarcodeScanner`,
-lazy-loaded, environment-facing) + auto-generate barcode; delete on the edit page;
+camera **barcode scanning** (reusable `components/BarcodeScanner`, lazy-loaded
+`ssr:false`): live 1D auto-read via **QuaggaJS 2** (`@ericblade/quagga2`,
+`numOfWorkers:0`, EAN-13/8, UPC-A/E, Code128/39) with a beep+vibrate cue and an
+animated scan line, **plus an image-upload fallback that decodes QR + 1D via
+ZXing** (QuaggaJS is 1D-only, so live QR isn't supported — use upload); auto-close
+on detect → fills the barcode field. Auto-generate barcode; delete on the edit page;
 dashboard CTA → products; `/products` added to protected routes. Build passes,
 typecheck clean, security advisors clean. **Not yet done (intentionally, later
 phases):** CSV/Excel import + bulk edit/variants (rest of Phase 2 scope, deferred),

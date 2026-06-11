@@ -35,6 +35,7 @@ export default async function SellPage() {
         hint: dict.products.scanHint,
         error: dict.products.scanError,
         close: dict.products.scanClose,
+        upload: dict.products.scanUpload,
       }}
     />
   );
