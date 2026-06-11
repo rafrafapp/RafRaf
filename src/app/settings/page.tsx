@@ -5,8 +5,6 @@ import { getUser, getMerchant } from "@/lib/auth/merchant";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SettingsForm } from "./SettingsForm";
 import { PasswordChangeForm } from "./PasswordChangeForm";
-import { ApiKeysDisclosure } from "./ApiKeysDisclosure";
-import { listApiKeys } from "./api-keys-actions";
 import { LogoUpload } from "./LogoUpload";
 import styles from "@/app/products/product-form.module.css";
 
@@ -18,7 +16,6 @@ export default async function SettingsPage() {
 
   const locale = await getCurrentLocale();
   const dict = await getDictionary(locale);
-  const apiKeys = await listApiKeys();
 
   // Only email/password accounts can change a password here (Google users manage
   // theirs with Google).
@@ -72,15 +69,6 @@ export default async function SettingsPage() {
         </div>
       )}
 
-      <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
-        <h1 className={styles.title}>{dict.settings.apiKeys.title}</h1>
-        <p className={styles.muted}>{dict.settings.apiKeys.subtitle}</p>
-        <ApiKeysDisclosure
-          initialKeys={apiKeys}
-          labels={dict.settings.apiKeys}
-          locale={locale}
-        />
-      </div>
     </main>
   );
 }

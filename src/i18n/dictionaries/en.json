@@ -845,34 +845,34 @@
   "landing": {
     "meta": {
       "title": "RafRaf — the digital shelf for every merchant",
-      "description": "An all-in-one platform for inventory, sales and debt ledgers, built for the Syrian market. Works offline and syncs your data automatically.",
-      "ogDescription": "Manage your inventory, sales and debt ledgers even without an internet connection. Built for the Syrian merchant."
+      "description": "An all-in-one platform for inventory, sales and debt ledgers, built for the Syrian market. Your data is safely stored in the cloud.",
+      "ogDescription": "Manage your inventory, sales and debt ledgers from any device. Built for the Syrian merchant."
     },
     "nav": { "features": "Features", "pricing": "Pricing", "developers": "Developers", "login": "Log in" },
     "hero": {
       "badge": "Now available in Syria",
       "titleLine1": "RafRaf — the digital shelf",
       "titleAccent": "for every merchant",
-      "subtitle": "The first all-in-one platform built for the realities of the Syrian market. Manage your inventory, sales and debt ledgers — even with no internet connection.",
+      "subtitle": "The first all-in-one platform built for the realities of the Syrian market. Manage your inventory, sales and debt ledgers with ease.",
       "ctaPrimary": "Start free",
       "ctaDevelopers": "For developers",
       "imageAlt": "A merchant using RafRaf on their phone",
       "floatStatus": "Current status",
-      "floatValue": "Works offline"
+      "floatValue": "Saved to the cloud"
     },
     "problem": {
       "title": "Goodbye to the old headaches",
       "subtitle": "RafRaf is designed to solve the Syrian merchant's real challenges.",
-      "power": { "title": "Power outage?", "text": "Don't worry — the app works perfectly offline and syncs your data automatically once the network is back." },
+      "power": { "title": "Lost data?", "text": "All your data is safely stored in the cloud — reach it from any device, anytime." },
       "debt": { "title": "Messy debt ledgers", "text": "Organize customer and supplier debts in one place, with smart reminders for collection dates." },
       "inventory": { "title": "Tiring manual stock-takes", "text": "Barcode scanning and automatic stock-taking tell you exactly what you have and what you need before you run out." }
     },
     "features": {
       "smart": { "title": "Smart inventory", "text": "Precise analytics on your best-selling and most profitable products." },
-      "offline": { "title": "Works with no internet", "text": "Data is stored locally and encrypted to protect it even with no connection." },
+      "offline": { "title": "⚡ Fast & smooth", "text": "A fast, comfortable interface built for the Syrian merchant." },
       "debt": { "title": "Debt ledger", "text": "Track every lira you're owed or you owe, with professional account statements." },
       "reports": { "title": "Clear reports", "text": "Detailed daily, weekly and monthly reports on financial and tax performance." },
-      "backup": { "title": "Automatic backup", "text": "Your data is always safe — automatic cloud backup the moment the internet is available." },
+      "backup": { "title": "☁️ Auto-save", "text": "Your data is saved automatically, moment by moment. Never lose a thing." },
       "telegram": { "title": "Telegram alerts", "text": "Debt reminders to customers and daily summaries to the merchant, sent directly over Telegram." }
     },
     "steps": {

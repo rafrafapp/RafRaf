@@ -13,8 +13,6 @@ import {
   IconBackup,
   IconChat,
   IconCheck,
-  IconCode,
-  IconWifiOff,
   IconQuote,
   IconMenu,
 } from "./icons";
@@ -42,9 +40,6 @@ export default async function LandingPage() {
               <a className={s.navLink} href="#pricing">
                 {t.nav.pricing}
               </a>
-              <Link className={s.navLink} href="/developers">
-                {t.nav.developers}
-              </Link>
             </div>
           </div>
           <div className={s.navEnd}>
@@ -77,10 +72,6 @@ export default async function LandingPage() {
                 <Link href="/login" className={s.btnPrimary}>
                   {t.hero.ctaPrimary}
                 </Link>
-                <Link href="/developers" className={s.btnOutline}>
-                  <IconCode size={22} />
-                  {t.hero.ctaDevelopers}
-                </Link>
               </div>
             </div>
             <div className={s.heroMedia}>
@@ -96,7 +87,7 @@ export default async function LandingPage() {
               <div className={`${s.floatCard} ${s.glassCard}`}>
                 <div className={s.floatRow}>
                   <span className={s.floatIcon}>
-                    <IconWifiOff size={22} />
+                    <IconBackup size={22} />
                   </span>
                   <div>
                     <div className={s.floatLabel}>{t.hero.floatStatus}</div>
@@ -118,7 +109,7 @@ export default async function LandingPage() {
             </div>
             <div className={s.bento}>
               <div className={`${s.card} ${s.col4} ${s.glassCard}`}>
-                <IconBolt size={36} className={s.cError} />
+                <IconCloudOff size={36} className={s.cError} />
                 <h3 className={s.cardTitle}>{t.problem.power.title}</h3>
                 <p className={s.cardText}>{t.problem.power.text}</p>
               </div>
@@ -149,7 +140,7 @@ export default async function LandingPage() {
               </div>
               <div className={`${s.featureHighlight} ${s.lgCol4} ${s.col6}`}>
                 <div className={s.cardChip}>
-                  <IconCloudOff size={22} />
+                  <IconBolt size={22} />
                 </div>
                 <h3 className={s.cardTitle}>{t.features.offline.title}</h3>
                 <p className={s.cardText}>{t.features.offline.text}</p>
@@ -295,53 +286,6 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* ---- Developers ---- */}
-        <section className={`${s.section} ${s.sectionAlt}`} id="developers">
-          <div className={`${s.container} ${s.bento}`} style={{ alignItems: "center" }}>
-            <div className={s.devText}>
-              <h2 className={s.h2}>{t.devSection.title}</h2>
-              <p className={s.lead} style={{ marginBottom: "2rem" }}>
-                {t.devSection.text}
-              </p>
-              <Link href="/developers" className={s.devBtn}>
-                <IconBook size={20} />
-                {t.devSection.cta}
-              </Link>
-            </div>
-            <div className={s.devMedia}>
-              <div className={s.codeWrap}>
-                <div className={s.codeDots}>
-                  <span className={`${s.dot} ${s.dotR}`} />
-                  <span className={`${s.dot} ${s.dotY}`} />
-                  <span className={`${s.dot} ${s.dotG}`} />
-                </div>
-                <pre className={s.codePre}>
-                  <span className={s.tComment}>{t.devSection.codeComment}</span>
-                  {"\n"}
-                  <span className={s.tKeyword}>const</span> rafraf ={" "}
-                  <span className={s.tKeyword}>require</span>(
-                  <span className={s.tString}>{"'rafraf-sdk'"}</span>);{"\n\n"}
-                  rafraf.<span className={s.tFunc}>init</span>({"{ "}
-                  {"\n  apiKey: "}
-                  <span className={s.tString}>{"'your_secret_key'"}</span>
-                  {"\n}"});{"\n\n"}
-                  <span className={s.tKeyword}>async</span>{" "}
-                  <span className={s.tKeyword}>function</span>{" "}
-                  <span className={s.tFunc}>getSales</span>() {"{"}
-                  {"\n  "}
-                  <span className={s.tKeyword}>const</span> sales ={" "}
-                  <span className={s.tKeyword}>await</span> rafraf.
-                  <span className={s.tFunc}>getDailyTotal</span>();{"\n  "}
-                  <span className={s.tVar}>console</span>.
-                  <span className={s.tFunc}>log</span>(
-                  <span className={s.tString}>{"'Today Sales:'"}</span>, sales);
-                  {"\n}"}
-                </pre>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* ---- Testimonials ---- */}
         <section className={s.section}>
           <div className={s.container}>
@@ -411,11 +355,6 @@ export default async function LandingPage() {
               <a className={s.footerLink} href="#">{t.footer.privacy}</a>
               <a className={s.footerLink} href="#">{t.footer.terms}</a>
               <a className={s.footerLink} href="#">{t.footer.data}</a>
-            </div>
-            <div className={s.footerCol}>
-              <h5 className={s.footerColTitle}>{t.footer.developers}</h5>
-              <Link className={s.footerLink} href="/developers">{t.footer.apiDocs}</Link>
-              <a className={s.footerLink} href="#">{t.footer.github}</a>
             </div>
           </div>
         </div>
