@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 import { adminPath } from "@/lib/security/admin-path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperadmin, logAdminAction } from "@/lib/security/admin";
-import { sanitizeString } from "@/lib/validation/sanitize-html";
 import { backupMerchant, backupAllMerchants } from "@/lib/backup/sheets";
 import { updateMasterSheet } from "@/lib/backup/master";
 import { notifyMerchant } from "@/lib/messaging/dispatch";
@@ -19,6 +18,18 @@ export type ActionResult = { ok: boolean; error?: string; message?: string };
 
 const PLANS = ["free", "basic", "smart"] as const;
 const IMPERSONATE_COOKIE = "rafraf_impersonate";
+
+// Plain-text sanitizer for admin free-text (announcements → Telegram, billing
+// notes). These are plain text with no HTML sink, so strip tags with a regex and
+// cap the length. Deliberately NO DOMPurify / jsdom here: isomorphic-dompurify
+// pulls jsdom → html-encoding-sniffer, whose ESM build crashes the Vercel server
+// bundle for the admin routes.
+function plainText(input: unknown, max: number): string {
+  return String(input ?? "")
+    .replace(/<[^>]*>/g, "")
+    .trim()
+    .slice(0, max);
+}
 
 export async function changePlan(
   merchantId: string,
@@ -53,7 +64,7 @@ export async function updateBilling(
   notesRaw: string,
 ): Promise<ActionResult> {
   const admin = await requireSuperadmin();
-  const notes = sanitizeString(notesRaw).slice(0, 1000);
+  const notes = plainText(notesRaw, 1000);
   const patch: Record<string, unknown> = { billing_notes: notes || null };
   if (markPaid) patch.last_paid_at = new Date().toISOString();
 
@@ -172,7 +183,7 @@ export async function broadcast(
   channel: "all" | "telegram",
 ): Promise<ActionResult> {
   const admin = await requireSuperadmin();
-  const message = sanitizeString(messageRaw).slice(0, 1000);
+  const message = plainText(messageRaw, 500);
   if (!message) return { ok: false, error: "empty" };
 
   const { data } = await createAdminClient()

@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { NO_TAGS, BARCODE_RE } from "./sanitize";
-import { sanitizeString } from "./sanitize-html";
+import { NO_TAGS, BARCODE_RE, sanitizeText } from "./sanitize";
 
 // Stock units offered in the product form. Constrained here (input) and surfaced
 // as a <select>; the DB column stays free-text so CSV import (Phase 2 later) can
@@ -40,7 +39,7 @@ const optionalNotes = (max: number) =>
     .max(max)
     .optional()
     .or(z.literal(""))
-    .transform((v) => (v ? sanitizeString(v) : undefined));
+    .transform((v) => (v ? sanitizeText(v) : undefined));
 
 // Money/quantity fields arrive from FormData as strings; coerce then bound to a
 // sane non-negative range. "" coerces to 0, which is the desired default.
@@ -82,7 +81,7 @@ export const productSchema = z.object({
     .transform((rec) => {
       const out: Record<string, string | number> = {};
       for (const [k, v] of Object.entries(rec)) {
-        out[k] = typeof v === "string" ? sanitizeString(v) : v;
+        out[k] = typeof v === "string" ? sanitizeText(v) : v;
       }
       return out;
     }),

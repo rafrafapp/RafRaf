@@ -1,12 +1,11 @@
 import { z } from "zod";
-import { NO_TAGS } from "@/lib/validation/sanitize";
-import { sanitizeString } from "@/lib/validation/sanitize-html";
+import { NO_TAGS, sanitizeText } from "@/lib/validation/sanitize";
 import { productSchema } from "@/lib/validation/product";
 
 // API request schemas. Product/customer create reuse the app's Zod schemas
 // (lib/validation/*); this file adds the transaction body, the PATCH (partial)
-// product shape, and list paging. Runs in the Node route runtime, so the DOMPurify
-// transforms in those schemas are fine here.
+// product shape, and list paging. Free-text is cleaned with the regex-only
+// sanitizeText (no DOMPurify/jsdom) so the Node API routes never bundle it.
 
 const money = z.number().finite().nonnegative().max(1_000_000_000);
 const qty = z.number().finite().positive().max(1_000_000);
@@ -39,7 +38,7 @@ export const apiTransactionSchema = z.object({
     .max(2000)
     .nullable()
     .optional()
-    .transform((v) => (typeof v === "string" ? sanitizeString(v) : v)),
+    .transform((v) => (typeof v === "string" ? sanitizeText(v) : v)),
   paid: money.optional(),
 });
 export type ApiTransactionInput = z.infer<typeof apiTransactionSchema>;

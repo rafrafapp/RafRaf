@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { PaymentMethod } from "@/lib/offline/db";
-import { NO_TAGS } from "./sanitize";
-import { sanitizeString } from "./sanitize-html";
+import { NO_TAGS, sanitizeText } from "./sanitize";
 
 // Payment methods (debt handling for credit/partial arrives in Phase 5).
 export const PAYMENT_METHODS: PaymentMethod[] = ["cash", "credit", "partial"];
@@ -18,7 +17,7 @@ const noteField = z
   .max(2000)
   .nullable()
   .optional()
-  .transform((v) => (typeof v === "string" ? sanitizeString(v) : v));
+  .transform((v) => (typeof v === "string" ? sanitizeText(v) : v));
 const productName = z.string().min(1).max(300).regex(NO_TAGS);
 const paymentField = z.enum(["cash", "credit", "partial"]);
 

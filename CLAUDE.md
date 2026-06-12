@@ -525,20 +525,25 @@ See `rafraf_security.md`. State of the layers:
   every write (auth, setup, settings, products, customers, suppliers, **and
   transactions** via `saleInputSchema`/`transactionInputSchema`/
   `settlementInputSchema`); DB (RLS + CHECKs + the RPC) is the server backstop.
-  **XSS layer**, *split for Edge safety:* `lib/validation/sanitize.ts` is
-  **regex-only** (`NO_TAGS`/`PHONE_RE`/`BARCODE_RE`, `safeDisplay`, `escapeHtml`) —
-  safe to import anywhere, **including middleware**; `lib/validation/sanitize-html.ts`
-  holds the DOMPurify `sanitizeString` (isomorphic — runs in browser + Node, **never
-  the Edge runtime**, and **not** `server-only` since the product/transaction schemas
-  validate client-side / offline). ⚠️ **Nothing reachable from `middleware.ts` may
-  import `sanitize-html`** — isomorphic-dompurify throws in Edge (`reading 'bind'`).
-  The live Edge chain is middleware→`security/events`→`messaging/dispatch`→
-  `messaging/telegram` (`telegram.ts` is fetch-only); `sanitize.ts` stays
-  regex-only so any Edge-reachable validation file can import it safely.
-  Schemas reject tags (`NO_TAGS`) + run free-text through `sanitizeString`;
-  DB CHECK constraints reject `<…>`; the raw-HTML sinks (`Receipt`, `ReportsView`
-  PDF) use `escapeHtml(sanitizeString())`; list views use `safeDisplay()`. Layers:
-  zod/whitelist → DOMPurify → DB CHECK → React escape.
+  **XSS layer**, *split for Edge **and Vercel-server** safety:*
+  `lib/validation/sanitize.ts` is **regex-only** (`NO_TAGS`/`PHONE_RE`/`BARCODE_RE`,
+  `safeDisplay`, `escapeHtml`, **`sanitizeText`** = tag-strip+trim) — safe to import
+  anywhere, **including middleware**. `lib/validation/sanitize-html.ts` holds the
+  DOMPurify `sanitizeString` and its **only importers are the two raw-HTML print
+  sinks** — `components/Receipt` (receipt window) + `app/reports/ReportsView` (PDF),
+  both `"use client"`. ⚠️ **Keep `sanitize-html` OUT of every other import chain:**
+  isomorphic-dompurify throws in the Edge runtime (`reading 'bind'`) **and** its Node
+  build pulls `jsdom`→`html-encoding-sniffer`, whose ESM crashes the **Vercel server
+  bundle** (this took down `/rafraf-admin/announcements` + would have hit `/api/v1/*`).
+  So the zod schemas (product / transaction / api) now clean free-text with the
+  regex-only **`sanitizeText`**, not DOMPurify. The live Edge chain is
+  middleware→`security/events`→`messaging/dispatch`→`messaging/telegram`
+  (`telegram.ts` is fetch-only). Schemas reject tags (`NO_TAGS`) + run free-text
+  through `sanitizeText`; DB CHECK constraints reject `<…>`; the raw-HTML sinks use
+  `escapeHtml(sanitizeString())`; list views use `safeDisplay()`. Layers:
+  zod/whitelist → DB CHECK → React escape (+ CSP nonce); DOMPurify only at the two
+  HTML sinks. **A build-time check:** `grep -rl jsdom .next/server/app` must list
+  **only** `sell/page.js` + `reports/page.js`.
 - **L3 Auth:** **login lockout** — `signInWithPassword` counts `FAILED_LOGIN` for
   the email over 15 min; ≥5 → `LOGIN_LOCKOUT` (Telegram) + `{error:"locked"}`.
   Dashboard Auth toggles (confirm-email, min-10, JWT 1h, refresh rotation, **HIBP

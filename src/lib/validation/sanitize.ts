@@ -16,6 +16,15 @@ export function safeDisplay(value: unknown): string {
   return value.replace(/<[^>]*>/g, "");
 }
 
+// Plain-text cleaner for Zod free-text transforms (notes / custom fields): a regex
+// tag-strip + trim. Regex-only (Edge-safe; NO DOMPurify/jsdom) — React escapes on
+// render, NO_TAGS rejects markup on named fields, and the DB CHECKs reject tags, so
+// off the raw-HTML print sinks this hygiene is enough.
+export function sanitizeText(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input.replace(/<[^>]*>/g, "").trim();
+}
+
 // HTML-context escape for the raw-HTML sinks (receipt / PDF print windows), where
 // user text is concatenated into an HTML string and entities ARE wanted.
 export function escapeHtml(s: string): string {

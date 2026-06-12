@@ -8,8 +8,12 @@ import DOMPurify from "isomorphic-dompurify";
 // any import chain reachable from middleware. The regex-only ./sanitize is the
 // Edge-safe counterpart.
 //
-// NOTE: deliberately NOT marked `import "server-only"`. The product/transaction Zod
-// schemas validate client-side (offline-first), so this must bundle for browsers.
+// NOTE: deliberately NOT marked `import "server-only"`. Its ONLY importers are now
+// the two raw-HTML print sinks — components/Receipt (receipt print window) and
+// reports/ReportsView (PDF export) — both `"use client"` components that build HTML
+// strings in the BROWSER. Keep it OUT of every other import chain: the Node build
+// pulls jsdom → html-encoding-sniffer, whose ESM breaks the Vercel server bundle.
+// Everywhere else, use the regex-only ./sanitize (sanitizeText / safeDisplay).
 //
 // We never render user input as HTML, so "sanitize" means: strip ALL markup and
 // return PLAIN TEXT (decoded). Returning HTML-encoded text would double-encode in
