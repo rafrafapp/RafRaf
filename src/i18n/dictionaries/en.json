@@ -36,6 +36,8 @@
     "haveAccount": "Have an account? Sign in",
     "noAccount": "No account? Create one",
     "forgotLink": "Forgot your password?",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "errors": {
       "invalid_input": "Check your email and password.",
       "invalid_credentials": "Incorrect email or password.",

@@ -36,6 +36,8 @@
     "haveAccount": "عندك حساب؟ سجّل الدخول",
     "noAccount": "ما عندك حساب؟ أنشئ واحداً",
     "forgotLink": "نسيت كلمة المرور؟",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
     "errors": {
       "invalid_input": "تحقق من البريد وكلمة المرور.",
       "invalid_credentials": "البريد أو كلمة المرور غير صحيحة.",
