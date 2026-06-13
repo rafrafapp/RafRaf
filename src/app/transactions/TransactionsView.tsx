@@ -10,11 +10,14 @@ import { useSync } from "@/lib/offline/useSync";
 import {
   recordShamCashVoid,
   VOID_NOTE_PREFIX,
+  buildInvoiceNumbers,
+  formatInvoiceNo,
 } from "@/lib/offline/transactions-repo";
 import { safeDisplay } from "@/lib/validation/sanitize";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
 import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -87,6 +90,9 @@ export function TransactionsView({
   }, [rows]);
   const types = tx.types as Record<string, string>;
   const providers = tx.mobileCredit.providers as Record<string, string>;
+
+  // Sequential invoice numbers (#0001…) for sell invoices, across all rows.
+  const invoiceNos = useMemo(() => buildInvoiceNumbers(all), [all]);
 
   // Group multi-item cart lines (shared group_uuid) into one invoice entry;
   // everything else is shown individually. Newest first.
@@ -195,9 +201,7 @@ export function TransactionsView({
           <h1 className={styles.title}>{tx.list.title}</h1>
           <p className={styles.subtitle}>{tx.list.subtitle}</p>
         </div>
-        <Link href="/sell" className={styles.back}>
-          {tx.sell.title}
-        </Link>
+        <BackButton label={common.back} />
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
@@ -232,10 +236,19 @@ export function TransactionsView({
             {tx.list.results}: {nf.format(entries.length)}
           </p>
           <ul className={styles.list}>
-            {entries.map((en) => (
+            {entries.map((en) => {
+              const no = formatInvoiceNo(invoiceNos.get(en.key));
+              return (
               <li key={en.key} className={styles.txRow}>
-                <div className={styles.txMain}>
-                  <span className={styles.txName}>{safeDisplay(en.title)}</span>
+                <Link
+                  href={`/transactions/${en.key}`}
+                  className={styles.txMain}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  <span className={styles.txName}>
+                    {no && <span className={styles.invoiceNo}>{no} </span>}
+                    {safeDisplay(en.title)}
+                  </span>
                   <div className={styles.txMeta}>
                     <span className={`${styles.txBadge} ${badgeClass(en.type)}`}>
                       {types[en.type]}
@@ -247,7 +260,7 @@ export function TransactionsView({
                       )}
                     </span>
                   </div>
-                </div>
+                </Link>
                 <div
                   style={{
                     display: "flex",
@@ -280,7 +293,8 @@ export function TransactionsView({
                   )}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </>
       )}

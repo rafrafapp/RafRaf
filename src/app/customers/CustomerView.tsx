@@ -20,6 +20,7 @@ import type { TxType } from "@/lib/offline/db";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
 import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
 import { CustomerForm } from "./CustomerForm";
 import styles from "@/components/transactions.module.css";
 
@@ -100,9 +101,7 @@ export function CustomerView({
         <p className={styles.error} role="alert">
           {c.errors.not_found}
         </p>
-        <Link href="/customers" className={styles.back}>
-          {c.backToList}
-        </Link>
+        <BackButton label={c.backToList} fallback="/customers" />
       </main>
     );
   }
@@ -184,9 +183,7 @@ export function CustomerView({
 
       <div className={styles.titleRow}>
         <h1 className={styles.title}>{customer.name}</h1>
-        <Link href="/customers" className={styles.back}>
-          {c.backToList}
-        </Link>
+        <BackButton label={c.backToList} fallback="/customers" />
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}

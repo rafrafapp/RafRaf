@@ -302,6 +302,21 @@
   color: var(--primary);
 }
 
+.consent {
+  margin-block-start: 1rem;
+  text-align: center;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.consent a {
+  color: var(--primary);
+  text-decoration: none;
+}
+.consent a:hover {
+  text-decoration: underline;
+}
+
 /* standalone auth pages: /forgot-password + /auth/reset-password */
 .authTitle {
   margin: 0 0 0.5rem;

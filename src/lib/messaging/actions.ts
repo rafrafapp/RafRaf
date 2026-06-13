@@ -2,9 +2,46 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { isTelegramConfigured, sendTelegram } from "./telegram";
-import { debtReminderMessage } from "./messages";
+import { notifyMerchant } from "./dispatch";
+import { debtReminderMessage, oversellMessage } from "./messages";
+import { sanitizeText } from "@/lib/validation/sanitize";
 
 export type ReminderResult = { ok: true } | { error: string };
+
+// Alert the merchant (on their own Telegram) that a sale was completed despite
+// insufficient stock. Best-effort and fire-and-forget from the client; the
+// merchant + chat id come from the RLS-scoped session, never the client.
+export async function notifyOversell(
+  productName: string,
+  available: number,
+  required: number,
+): Promise<{ ok: boolean }> {
+  try {
+    if (!isTelegramConfigured()) return { ok: false };
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { ok: false };
+
+    const { data: m } = await supabase
+      .from("merchants")
+      .select("store_name,notify_channel,telegram_chat_id")
+      .eq("id", user.id)
+      .single();
+    if (!m) return { ok: false };
+
+    const ok = await notifyMerchant(m, oversellMessage({
+      storeName: m.store_name ?? "RafRaf",
+      productName: sanitizeText(String(productName)).slice(0, 80),
+      available: Number(available) || 0,
+      required: Number(required) || 0,
+    }));
+    return { ok };
+  } catch {
+    return { ok: false };
+  }
+}
 
 // Owner-triggered debt reminder to a CUSTOMER, sent over Telegram. The customer
 // must have linked their Telegram (the owner pastes the customer's chat id into

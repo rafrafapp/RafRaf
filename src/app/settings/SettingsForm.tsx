@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { NOTIFY_CHANNELS } from "@/lib/validation/merchant";
 import { updateNotificationSettings } from "@/lib/merchant/actions";
 import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
+import { CopyField } from "@/components/CopyField";
 import styles from "@/app/products/product-form.module.css";
 
 type Props = {
@@ -82,6 +83,16 @@ export function SettingsForm({ initial, settings: s, common, botUsername }: Prop
               placeholder="123456789"
             />
           </label>
+          {initial.telegram_chat_id && (
+            <div className={styles.label}>
+              {s.savedChatId}
+              <CopyField
+                value={initial.telegram_chat_id}
+                copyLabel={common.copy}
+                copiedLabel={common.copied}
+              />
+            </div>
+          )}
         </div>
       )}
       {channel !== "telegram" && (
@@ -115,9 +126,7 @@ export function SettingsForm({ initial, settings: s, common, botUsername }: Prop
         )}
       </button>
 
-      <Link href="/dashboard" className={styles.back}>
-        {s.backToDashboard}
-      </Link>
+      <BackButton label={s.backToDashboard} fallback="/dashboard" />
     </form>
   );
 }

@@ -1,0 +1,32 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  appearance: none;
+  border: 1px solid var(--border, #3c4a42);
+  background: transparent;
+  color: var(--text-muted, #bbcabf);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.back:hover {
+  color: var(--brand, #4edea3);
+  border-color: var(--brand, #4edea3);
+  background: rgba(78, 222, 163, 0.08);
+}
+
+/* The chevron points to the inline-start; flip it in RTL so it always reads
+   as "back" (toward where the page content begins). */
+.icon {
+  flex-shrink: 0;
+}
+:global([dir="rtl"]) .icon {
+  transform: scaleX(-1);
+}

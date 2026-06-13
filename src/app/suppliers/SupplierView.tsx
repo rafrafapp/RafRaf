@@ -18,6 +18,7 @@ import type { TxType } from "@/lib/offline/db";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
 import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
 import { SupplierForm } from "./SupplierForm";
 import styles from "@/components/transactions.module.css";
 
@@ -81,9 +82,7 @@ export function SupplierView({
         <p className={styles.error} role="alert">
           {s.errors.not_found}
         </p>
-        <Link href="/suppliers" className={styles.back}>
-          {s.backToList}
-        </Link>
+        <BackButton label={s.backToList} fallback="/suppliers" />
       </main>
     );
   }
@@ -147,9 +146,7 @@ export function SupplierView({
 
       <div className={styles.titleRow}>
         <h1 className={styles.title}>{supplier.name}</h1>
-        <Link href="/suppliers" className={styles.back}>
-          {s.backToList}
-        </Link>
+        <BackButton label={s.backToList} fallback="/suppliers" />
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}

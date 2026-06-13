@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { createClient } from "@/lib/supabase/client";
+import { sendPasswordResetEmail } from "@/lib/auth/actions";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/app/login/login.module.css";
 
 // Request a password-reset email. Calls Supabase directly from the browser. To
@@ -30,9 +32,14 @@ export function ForgotPasswordForm({
     setError(null);
     setPending(true);
     try {
-      await createClient().auth.resetPasswordForEmail(value, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
+      // Prefer RafRaf's own Resend-API email (independent of Supabase SMTP).
+      const res = await sendPasswordResetEmail(value);
+      // Fall back to Supabase's built-in mailer if we didn't send it ourselves.
+      if (!res.sent) {
+        await createClient().auth.resetPasswordForEmail(value, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        });
+      }
     } catch {
       // Swallow — never reveal whether the email exists or that infra failed.
     }
@@ -75,7 +82,14 @@ export function ForgotPasswordForm({
         />
       </label>
       <button type="submit" className={styles.submit} disabled={pending}>
-        {pending ? labels.submitting : labels.submit}
+        {pending ? (
+          <>
+            <Spinner />
+            {labels.submitting}
+          </>
+        ) : (
+          labels.submit
+        )}
       </button>
       <Link href="/login" className={styles.backLink}>
         {labels.backToLogin}

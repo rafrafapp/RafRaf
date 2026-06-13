@@ -197,6 +197,17 @@ export function LoginForm({ auth, password: pwLabels, urlError }: Props) {
       >
         {isSignIn ? auth.noAccount : auth.haveAccount}
       </button>
+
+      <p className={styles.consent}>
+        {auth.agree}{" "}
+        <Link href="/terms" target="_blank" rel="noopener noreferrer">
+          {auth.terms}
+        </Link>{" "}
+        {auth.and}{" "}
+        <Link href="/privacy" target="_blank" rel="noopener noreferrer">
+          {auth.privacy}
+        </Link>
+      </p>
     </div>
   );
 }

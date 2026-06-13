@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchantContext } from "@/lib/auth/merchant";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { BackButton } from "@/components/BackButton";
 import { AiView } from "./AiView";
 import styles from "./ai.module.css";
 
@@ -22,9 +22,7 @@ export default async function AiPage() {
   return (
     <main className={styles.main}>
       <header className={styles.header}>
-        <Link href="/dashboard" className={styles.back}>
-          ← {dict.ai.back}
-        </Link>
+        <BackButton label={dict.ai.back} />
         <LanguageSwitcher
           current={locale}
           labels={{ arabic: dict.common.arabic, english: dict.common.english }}

@@ -12,6 +12,7 @@ export function isTelegramConfigured(): boolean {
 export async function sendTelegram(
   chatId: string | number | null | undefined,
   text: string,
+  opts?: { parseMode?: "HTML" | "MarkdownV2" },
 ): Promise<boolean> {
   if (!isTelegramConfigured() || chatId == null || chatId === "") return false;
   const token = process.env.TELEGRAM_BOT_TOKEN!.trim();
@@ -23,6 +24,7 @@ export async function sendTelegram(
         chat_id: chatId,
         text,
         disable_web_page_preview: true,
+        ...(opts?.parseMode ? { parse_mode: opts.parseMode } : {}),
       }),
     });
     return res.ok;

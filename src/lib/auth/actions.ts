@@ -3,10 +3,13 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { signInSchema, signUpSchema } from "@/lib/validation/auth";
 import { checkPassword } from "@/lib/validation/password";
 import { logSecurityEvent, getRecentFailedLogins } from "@/lib/security/events";
 import { rateLimit } from "@/lib/security/ratelimit";
+import { isEmailConfigured, sendEmail } from "@/lib/email/resend";
+import { resetPasswordEmail } from "@/lib/email/templates/reset-password";
 
 // Form state returned to the client. `error`/`notice` are i18n *codes* the
 // client maps to localized copy — the server never builds user-facing strings,
@@ -134,6 +137,41 @@ export async function signUpWithPassword(
   if (!data.session) return { notice: "check_email" };
 
   redirect("/dashboard");
+}
+
+// Send a password-reset email via the Resend *API* (not Supabase SMTP), so the
+// flow works even when Supabase's own mailer is unconfigured/failing. We mint a
+// recovery link with the admin client (token_hash → our /auth/reset-password page,
+// which already verifies it), then email it ourselves. Returns whether we actually
+// sent — the client falls back to Supabase's resetPasswordForEmail if not, and
+// always shows the same generic success (no account enumeration).
+export async function sendPasswordResetEmail(
+  email: string,
+): Promise<{ sent: boolean }> {
+  const value = (email ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return { sent: false };
+
+  const ip = await clientIp();
+  if (!(await rateLimit(`reset:${ip}`, 10)).success) return { sent: false };
+  if (!isEmailConfigured()) return { sent: false };
+
+  try {
+    const origin =
+      process.env.NEXT_PUBLIC_SITE_URL?.trim() || (await getOrigin());
+    const admin = createAdminClient();
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email: value,
+      options: { redirectTo: `${origin}/auth/reset-password` },
+    });
+    const hashed = data?.properties?.hashed_token;
+    if (error || !hashed) return { sent: false };
+    const url = `${origin}/auth/reset-password?token_hash=${hashed}&type=recovery`;
+    const { subject, html } = resetPasswordEmail(url);
+    return { sent: await sendEmail(value, subject, html) };
+  } catch {
+    return { sent: false };
+  }
 }
 
 export async function signInWithGoogle(): Promise<void> {

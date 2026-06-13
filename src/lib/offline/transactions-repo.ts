@@ -419,6 +419,49 @@ export function getInvoiceLines(group: string): Promise<LocalTransaction[]> {
     .sortBy("created_at");
 }
 
+// Fetch one invoice/entry by its id — a group_uuid (multi-line sale) or a single
+// row's client_uuid — scoped to the merchant. Oldest line first.
+export async function getInvoice(
+  merchantId: string,
+  id: string,
+): Promise<LocalTransaction[]> {
+  const db = getDb();
+  const group = await db.transactions.where("group_uuid").equals(id).toArray();
+  let rows = group;
+  if (rows.length === 0) {
+    const single = await db.transactions.get(id);
+    rows = single ? [single] : [];
+  }
+  return rows
+    .filter((t) => t.merchant_id === merchantId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+// Sequential per-merchant invoice numbers for SELL invoices, ranked by the
+// invoice's earliest line date (ascending) → group_uuid → number (1-based).
+// Derived from the loaded ledger, so it's stable as long as history is synced.
+export function buildInvoiceNumbers(
+  rows: LocalTransaction[],
+): Map<string, number> {
+  const earliest = new Map<string, string>();
+  for (const t of rows) {
+    if (t.type !== "sell" || !t.group_uuid) continue;
+    const cur = earliest.get(t.group_uuid);
+    if (!cur || t.created_at < cur) earliest.set(t.group_uuid, t.created_at);
+  }
+  const ordered = [...earliest.entries()].sort((a, b) =>
+    a[1].localeCompare(b[1]),
+  );
+  const map = new Map<string, number>();
+  ordered.forEach(([g], i) => map.set(g, i + 1));
+  return map;
+}
+
+// "#0001" style display id (empty string for a non-numbered entry).
+export function formatInvoiceNo(n: number | undefined | null): string {
+  return n ? `#${String(n).padStart(4, "0")}` : "";
+}
+
 // A party's ledger (newest first) for the profile timeline. Keyed off the
 // [merchant_id+customer_id] / [merchant_id+supplier_id] compound indexes.
 export async function getCustomerLedger(

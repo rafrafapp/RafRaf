@@ -12,6 +12,7 @@ import { safeDisplay } from "@/lib/validation/sanitize";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncStatus } from "@/components/SyncStatus";
 import { ProductsToolbar } from "./ProductsToolbar";
+import { BackButton } from "@/components/BackButton";
 import styles from "./products.module.css";
 
 const PAGE_SIZE = 20;
@@ -165,6 +166,9 @@ export function ProductsView({
 
       <div className={styles.titleRow}>
         <div>
+          <div style={{ marginBlockEnd: "0.5rem" }}>
+            <BackButton label={common.back} />
+          </div>
           <h1 className={styles.title}>{p.title}</h1>
           <p className={styles.subtitle}>{p.subtitle}</p>
         </div>

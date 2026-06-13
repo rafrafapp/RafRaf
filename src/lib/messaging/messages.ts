@@ -42,6 +42,15 @@ export function debtReminderMessage(o: {
   return `${o.name}، تذكير ودّي 🌿\nرصيدك المستحق لدى ${o.storeName}: ${nf.format(o.amount)} ${o.currency}.\nنشكر تعاملك معنا.`;
 }
 
+export function oversellMessage(o: {
+  storeName: string;
+  productName: string;
+  available: number;
+  required: number;
+}): string {
+  return `⚠️ ${o.storeName}\nتم البيع رغم نقص المخزون!\nالمنتج: «${o.productName}»\nالمتوفر: ${nf.format(o.available)} · المطلوب: ${nf.format(o.required)}\nيرجى إعادة الطلب أو مراجعة المخزون.`;
+}
+
 export function backupFailureMessage(o: { scope: string; count: number }): string {
   return `🛑 RafRaf: فشل النسخ الاحتياطي (${o.scope}) — ${nf.format(o.count)} حالة.\nراجع سجل backup_logs.`;
 }

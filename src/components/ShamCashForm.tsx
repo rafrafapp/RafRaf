@@ -12,6 +12,7 @@ import { PAYMENT_METHODS, parsePositive } from "@/lib/validation/transaction";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
 import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -107,9 +108,7 @@ export function ShamCashForm({
           <h1 className={styles.title}>💸 {s.title}</h1>
           <p className={styles.subtitle}>{s.subtitle}</p>
         </div>
-        <Link href="/dashboard" className={styles.back}>
-          {tx.list.title}
-        </Link>
+        <BackButton label={common.back} />
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}

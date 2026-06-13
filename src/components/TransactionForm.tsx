@@ -20,6 +20,7 @@ import { SyncBadge } from "@/components/SyncBadge";
 import { ProductPicker } from "@/components/ProductPicker";
 import { PartyPicker, type Party } from "@/components/PartyPicker";
 import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
 import styles from "@/components/transactions.module.css";
 
 type Props = {
@@ -145,9 +146,7 @@ export function TransactionForm({
           <h1 className={styles.title}>{block.title}</h1>
           <p className={styles.subtitle}>{block.subtitle}</p>
         </div>
-        <Link href="/dashboard" className={styles.back}>
-          {tx.list.title}
-        </Link>
+        <BackButton label={common.back} />
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}

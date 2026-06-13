@@ -291,6 +291,13 @@
 .cTertiary { color: var(--tertiary); }
 .cError { color: var(--error); }
 
+/* Per-card accent stripe (start edge) so each action reads as its own category. */
+.accentPrimary { border-inline-start: 3px solid var(--primary); }
+.accentSecondary { border-inline-start: 3px solid var(--secondary); }
+.accentTertiary { border-inline-start: 3px solid var(--tertiary); }
+.accentError { border-inline-start: 3px solid var(--error); }
+.action .actionIcon { border: 1px solid transparent; }
+
 /* ---- bottom panels ---- */
 .panels {
   display: grid;

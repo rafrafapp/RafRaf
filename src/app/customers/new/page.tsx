@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchantContext } from "@/lib/auth/merchant";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { BackButton } from "@/components/BackButton";
 import { CustomerForm } from "../CustomerForm";
 import styles from "@/app/products/product-form.module.css";
 
@@ -31,9 +31,7 @@ export default async function NewCustomerPage() {
       </div>
 
       <div className={styles.card}>
-        <Link href="/customers" className={styles.back}>
-          {dict.customers.backToList}
-        </Link>
+        <BackButton label={dict.customers.backToList} fallback="/customers" />
         <h1 className={styles.title}>{dict.customers.addTitle}</h1>
         <CustomerForm
           mode="create"

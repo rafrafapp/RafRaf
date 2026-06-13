@@ -899,3 +899,54 @@ the smart gate.
 Next: remaining polish from the build prompt (Phase 2's deferred CSV/Excel product
 import + bulk edit/variants; launch-checklist items). All 12 planned phases are now
 scaffolded. Build phases strictly in order; confirm each works before moving on.
+
+---
+
+## UX polish pass (post-Phase-12)
+
+A round of merchant-feedback fixes (all offline-safe, no schema change):
+
+- **Forgot-password email** no longer depends on Supabase SMTP: `sendPasswordResetEmail`
+  (`lib/auth/actions.ts`) mints a recovery link with the **admin client**
+  (`generateLink({type:"recovery"})` → `token_hash` → our `/auth/reset-password`) and
+  sends it via the **Resend API** (`lib/email/templates/reset-password.ts` →
+  `resetPasswordEmail(url)`). `ForgotPasswordForm` calls it, then **falls back** to
+  Supabase's own `resetPasswordForEmail` if we didn't send (e.g. Resend unset). Always a
+  generic success (no enumeration). Needs `RESEND_API_KEY` + `EMAIL_FROM` for the
+  primary path.
+- **Loading spinners** on every submit (login/signup already had one; added to
+  forgot-/reset-password + expense). The shared `<Spinner />` pattern is the standard.
+- **Back button** — shared `components/BackButton.tsx` (router.back() + fallback route,
+  RTL-aware chevron) replaces the ad-hoc per-page back links; on every feature page.
+- **Password show/hide eye** (light green) on the login/signup password field.
+- **Serious oversell warning** — `/sell` shows a red, bold dialog with product +
+  available vs requested qty, and fires a Telegram alert to the merchant on confirm
+  (`notifyOversell` in `lib/messaging/actions.ts` → `oversellMessage`).
+- **Telegram chat-id copy** — `components/CopyField.tsx` (code block + copy) in Settings;
+  the bot `/start` reply wraps the id in `<code>` (HTML parse mode) so it's tap-to-copy.
+- **Invoices have a sequential id** (`#0001`) — `buildInvoiceNumbers`/`formatInvoiceNo`
+  in `transactions-repo` rank sell invoices by earliest line date (derived from the
+  loaded ledger; stable while history is synced — **not** a stored column). Shown in the
+  history list, on the receipt, and on the new **invoice detail page**
+  `/transactions/[id]` (`InvoiceView` — items, customer/supplier, payment, note, totals,
+  reprint). History rows link to it.
+- **Direct PDF export** (`/reports`) — `jspdf` + `html2canvas` render a branded,
+  Arabic-safe light report to a downloaded PDF (no print dialog); falls back to a print
+  window if the libs fail. **Excel export** is a styled HTML-table `.xls`
+  (dark header, alternating rows, RafRaf branding) — no extra dependency, colours intact.
+- **Distinct action cards** on the dashboard — per-category accent stripe + tinted icon
+  background (not just icon colour).
+- **Terms/Privacy** consent line + links on login; footer + Settings links already added.
+
+### Deferred — needs a decision / SQL (DO NOT implement without sign-off)
+
+- **Multi-currency per merchant** (planned, **schema change required**): a
+  `merchant_currencies` table (`merchant_id`, `code`, `rate_to_base`, `is_base`,
+  `updated_at`; RLS owner-CRUD) + a `currency` column already on `transactions` (reuse the
+  existing `currency` field). Each transaction picks a currency; the report module converts
+  to the base currency via the stored manual rate. Settings gets a "currencies & rates"
+  manager. Offline: mirror `merchant_currencies` in Dexie like products. **Present the
+  full plan + migration before applying** — invasive across sell/buy/returns/reports.
+- **Client QR code / ID + send invoice to client directly** (future): give each customer a
+  QR/short id; let the owner send a specific invoice to the customer's Telegram (extends
+  `sendDebtReminder` to a per-invoice message, reusing `/transactions/[id]`).

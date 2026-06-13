@@ -463,6 +463,145 @@
   font-size: 0.95rem;
 }
 
+/* Serious oversell warning — red, bold, with the available/required breakdown. */
+.warnBox {
+  border-color: #7a2b25;
+  border-width: 1.5px;
+  box-shadow: 0 0 0 1px rgba(255, 122, 122, 0.25), 0 20px 50px -20px rgba(0, 0, 0, 0.7);
+}
+.warnTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.5;
+  color: #ff6b6b;
+}
+.warnRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.25);
+  border-radius: 0.6rem;
+  padding: 0.7rem 0.85rem;
+}
+.warnRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+.warnRow strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.warnAvail {
+  color: #ff6b6b !important;
+}
+.warnQuestion {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Invoice number badge (#0001) on history rows + the invoice detail page. */
+.invoiceNo {
+  color: var(--brand);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- invoice detail page ---- */
+.invoiceCard {
+  width: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: clamp(1.1rem, 4vw, 1.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.invoiceHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.85rem;
+}
+.invoiceNoBig {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+.invoiceDate {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+.invoiceMetaGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 1rem;
+  font-size: 0.9rem;
+}
+.invoiceMetaKey {
+  color: var(--text-muted);
+}
+.invoiceMetaVal {
+  color: var(--text);
+  font-weight: 600;
+  text-align: end;
+}
+.invoiceLines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.invoiceLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 0.92rem;
+}
+.invoiceLineName {
+  color: var(--text);
+  font-weight: 600;
+}
+.invoiceLineQty {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.invoiceTotalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--brand);
+  padding-top: 0.5rem;
+}
+.invoiceNote {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
 .confirmActions,
 .receiptActions {
   display: flex;

@@ -8,6 +8,7 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 import { createClient } from "@/lib/supabase/client";
 import { checkPassword } from "@/lib/validation/password";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { Spinner } from "@/components/Spinner";
 import styles from "@/app/login/login.module.css";
 
 type Status = "verifying" | "ready" | "invalid" | "done";
@@ -172,7 +173,14 @@ export function ResetPasswordForm({
         className={styles.submit}
         disabled={pending || !strength.acceptable || mismatch}
       >
-        {pending ? labels.submitting : labels.submit}
+        {pending ? (
+          <>
+            <Spinner />
+            {labels.submitting}
+          </>
+        ) : (
+          labels.submit
+        )}
       </button>
     </form>
   );

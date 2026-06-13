@@ -11,6 +11,8 @@ import { useSync } from "@/lib/offline/useSync";
 import { EXPENSE_CATEGORIES, parsePositive } from "@/lib/validation/transaction";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
+import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
 import styles from "@/components/transactions.module.css";
 
 type Props = {
@@ -97,9 +99,7 @@ export function ExpenseForm({
           <h1 className={styles.title}>{e.title}</h1>
           <p className={styles.subtitle}>{e.subtitle}</p>
         </div>
-        <Link href="/dashboard" className={styles.back}>
-          {tx.list.title}
-        </Link>
+        <BackButton label={common.back} />
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
@@ -156,7 +156,14 @@ export function ExpenseForm({
           onClick={save}
           disabled={saving}
         >
-          {saving ? tx.sell.completing : e.save}
+          {saving ? (
+            <>
+              <Spinner />
+              {tx.sell.completing}
+            </>
+          ) : (
+            e.save
+          )}
         </button>
       </div>
     </main>

@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchantContext } from "@/lib/auth/merchant";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { BackButton } from "@/components/BackButton";
 import { SupplierForm } from "../SupplierForm";
 import styles from "@/app/products/product-form.module.css";
 
@@ -31,9 +31,7 @@ export default async function NewSupplierPage() {
       </div>
 
       <div className={styles.card}>
-        <Link href="/suppliers" className={styles.back}>
-          {dict.suppliers.backToList}
-        </Link>
+        <BackButton label={dict.suppliers.backToList} fallback="/suppliers" />
         <h1 className={styles.title}>{dict.suppliers.addTitle}</h1>
         <SupplierForm
           mode="create"

@@ -63,6 +63,21 @@ const ACTIONS: { href: string; label: ActionLabel; Icon: IconComp; color: ColorC
   { href: "/mobile-credit", label: "mobileCredit", Icon: IconPhone, color: "cPrimary" },
 ];
 
+// Per-color helpers so each action card gets a distinct accent + tinted icon
+// background (not just a different SVG colour) — visual hierarchy across cards.
+const ICON_BG: Record<ColorClass, string> = {
+  cPrimary: "iconBgPrimary",
+  cSecondary: "iconBgSecondary",
+  cTertiary: "iconBgTertiary",
+  cError: "iconBgError",
+};
+const ACCENT: Record<ColorClass, string> = {
+  cPrimary: "accentPrimary",
+  cSecondary: "accentSecondary",
+  cTertiary: "accentTertiary",
+  cError: "accentError",
+};
+
 // Income (+, green) vs outflow (−, red) for the recent-activity amounts.
 const INCOME: TxType[] = ["sell", "debt_payment", "return_supplier", "mobile_credit", "sham_cash"];
 
@@ -283,8 +298,12 @@ export function DashboardView({
           <div className={styles.actionsCol}>
             <nav className={styles.actions}>
               {actions.map((a) => (
-                <Link key={a.href} href={a.href} className={`${styles.action} ${styles.glass}`}>
-                  <span className={styles.actionIcon}>
+                <Link
+                  key={a.href}
+                  href={a.href}
+                  className={`${styles.action} ${styles.glass} ${styles[ACCENT[a.color]]}`}
+                >
+                  <span className={`${styles.actionIcon} ${styles[ICON_BG[a.color]]}`}>
                     <a.Icon size={24} className={styles[a.color]} />
                   </span>
                   <span className={styles.actionLabel}>{d[a.label]}</span>

@@ -19,6 +19,7 @@ type Props = {
   dateIso: string;
   lines: ReceiptLine[];
   total: number;
+  invoiceNo?: string;
   labels: {
     title: string;
     print: string;
@@ -45,6 +46,7 @@ export function Receipt({
   dateIso,
   lines,
   total,
+  invoiceNo,
   labels,
   onClose,
 }: Props) {
@@ -62,6 +64,7 @@ export function Receipt({
       .join("\n");
     return [
       storeName,
+      ...(invoiceNo ? [invoiceNo] : []),
       dateStr,
       sep,
       body,
@@ -105,7 +108,7 @@ export function Receipt({
         `table{width:100%;border-collapse:collapse;font-size:13px}td{padding:3px 0;border-bottom:1px dashed #ccc}` +
         `.n{text-align:end;white-space:nowrap}.t{display:flex;justify-content:space-between;font-weight:700;margin-top:8px;font-size:15px}` +
         `.th{text-align:center;color:#666;font-size:12px;margin-top:10px}</style></head><body>` +
-        `<h1>${safeHtml(storeName)}</h1><div class="d">${escapeHtml(dateStr)}</div>` +
+        `<h1>${safeHtml(storeName)}</h1>${invoiceNo ? `<div class="d">${escapeHtml(invoiceNo)}</div>` : ""}<div class="d">${escapeHtml(dateStr)}</div>` +
         `<table>${rows}</table>` +
         `<div class="t"><span>${escapeHtml(labels.total)}</span><span>${nf.format(total)} ${safeHtml(currency)}</span></div>` +
         `<div class="th">${escapeHtml(labels.thanks)}</div>` +
@@ -127,6 +130,7 @@ export function Receipt({
     >
       <div className={styles.receipt}>
         <p className={styles.receiptStore}>{storeName}</p>
+        {invoiceNo && <p className={styles.receiptDate}>{invoiceNo}</p>}
         <p className={styles.receiptDate}>{dateStr}</p>
         <ul className={styles.receiptLines}>
           {lines.map((l, i) => (

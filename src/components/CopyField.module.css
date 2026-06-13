@@ -1,0 +1,44 @@
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.code {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  color: var(--brand, #4edea3);
+  background: var(--sc-low, #131b2e);
+  border: 1px dashed var(--border, #3c4a42);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.btn {
+  flex: 0 0 auto;
+  appearance: none;
+  border: none;
+  background: var(--brand, #4edea3);
+  color: var(--brand-contrast, #00422b);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding-inline: 1rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn:hover {
+  opacity: 0.9;
+}
+.btnCopied {
+  background: var(--primary-container, #10b981);
+}

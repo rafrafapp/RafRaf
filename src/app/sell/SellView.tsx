@@ -5,7 +5,12 @@ import Link from "next/link";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb, type LocalProduct, type PaymentMethod } from "@/lib/offline/db";
-import { recordSale, type CartLine } from "@/lib/offline/transactions-repo";
+import {
+  recordSale,
+  buildInvoiceNumbers,
+  formatInvoiceNo,
+  type CartLine,
+} from "@/lib/offline/transactions-repo";
 import { syncAll } from "@/lib/offline/sync";
 import { useSync } from "@/lib/offline/useSync";
 import { PAYMENT_METHODS } from "@/lib/validation/transaction";
@@ -15,6 +20,8 @@ import { ProductPicker } from "@/components/ProductPicker";
 import { PartyPicker, type Party } from "@/components/PartyPicker";
 import { Receipt, type ReceiptLine } from "@/components/Receipt";
 import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
+import { notifyOversell } from "@/lib/messaging/actions";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -58,11 +65,16 @@ export function SellView({
   const [customer, setCustomer] = useState<Party | null>(null);
   const [paid, setPaid] = useState("");
   const [note, setNote] = useState("");
-  const [overdraw, setOverdraw] = useState(false);
+  const [overdraw, setOverdraw] = useState<{
+    name: string;
+    available: number;
+    required: number;
+  } | null>(null);
   const [receipt, setReceipt] = useState<{
     lines: ReceiptLine[];
     total: number;
     date: string;
+    invoiceNo: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
   // Synchronous re-entrancy guard: complete() awaits a Dexie stock read before
@@ -114,7 +126,11 @@ export function SellView({
       if (!l.product_id) continue;
       const p = await db.products.get(l.product_id);
       if (p && l.qty > Number(p.stock)) {
-        setOverdraw(true);
+        setOverdraw({
+          name: l.product_name,
+          available: Number(p.stock),
+          required: l.qty,
+        });
         return;
       }
     }
@@ -124,10 +140,11 @@ export function SellView({
   async function proceedComplete() {
     if (cart.length === 0 || busyRef.current) return;
     busyRef.current = true;
-    setOverdraw(false);
+    const oversold = overdraw; // capture before clearing — drives the alert below
+    setOverdraw(null);
     setSaving(true);
     try {
-      await recordSale({
+      const group = await recordSale({
         merchantId,
         currency,
         payment,
@@ -142,16 +159,31 @@ export function SellView({
         price: l.price,
         total: lineTotal(l),
       }));
+      // Derive this invoice's sequential number (#0001) from the local ledger.
+      const allTx = await getDb()
+        .transactions.where("merchant_id")
+        .equals(merchantId)
+        .toArray();
+      const invoiceNo = formatInvoiceNo(buildInvoiceNumbers(allTx).get(group));
       setReceipt({
         lines,
         total: lines.reduce((sum, l) => sum + l.total, 0),
         date: new Date().toISOString(),
+        invoiceNo,
       });
       setCart([]);
       setNote("");
       setPayment("cash");
       setCustomer(null);
       setPaid("");
+      // Alert the merchant on Telegram when a sale was completed despite empty/
+      // insufficient stock (best-effort; no-op if Telegram isn't configured).
+      if (oversold)
+        void notifyOversell(
+          oversold.name,
+          oversold.available,
+          oversold.required,
+        ).catch(() => {});
       void syncAll(merchantId).catch(() => {});
     } finally {
       setSaving(false);
@@ -182,9 +214,7 @@ export function SellView({
 
       <div className={styles.titleRow}>
         <h1 className={styles.title}>{s.title}</h1>
-        <Link href="/dashboard" className={styles.back}>
-          {tx.list.title}
-        </Link>
+        <BackButton label={common.back} />
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
@@ -372,13 +402,30 @@ export function SellView({
 
       {overdraw && (
         <div className={styles.overlay} role="dialog" aria-modal="true">
-          <div className={styles.confirmBox}>
-            <p className={styles.confirmTitle}>{s.oversellTitle}</p>
+          <div className={`${styles.confirmBox} ${styles.warnBox}`}>
+            <p className={styles.warnTitle}>{s.oversellTitle}</p>
+            <div className={styles.warnRows}>
+              <div className={styles.warnRow}>
+                <span>{s.oversellProduct}</span>
+                <strong>{overdraw.name}</strong>
+              </div>
+              <div className={styles.warnRow}>
+                <span>{s.oversellAvailable}</span>
+                <strong className={styles.warnAvail}>
+                  {nf.format(overdraw.available)}
+                </strong>
+              </div>
+              <div className={styles.warnRow}>
+                <span>{s.oversellRequired}</span>
+                <strong>{nf.format(overdraw.required)}</strong>
+              </div>
+            </div>
+            <p className={styles.warnQuestion}>{s.oversellQuestion}</p>
             <div className={styles.confirmActions}>
               <button
                 type="button"
                 className={styles.btnGhost}
-                onClick={() => setOverdraw(false)}
+                onClick={() => setOverdraw(null)}
               >
                 {s.oversellNo}
               </button>
@@ -410,6 +457,7 @@ export function SellView({
           dateIso={receipt.date}
           lines={receipt.lines}
           total={receipt.total}
+          invoiceNo={receipt.invoiceNo}
           labels={{
             title: tx.receipt.title,
             print: tx.receipt.print,

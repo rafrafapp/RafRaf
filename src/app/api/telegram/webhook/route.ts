@@ -31,9 +31,11 @@ export async function POST(req: Request) {
   const chatId = update.message?.chat?.id;
   const text = (update.message?.text ?? "").trim().toLowerCase();
   if (chatId != null && (text === "/start" || text === "/id" || text.startsWith("/start"))) {
+    // Send the id inside <code>…</code> so Telegram makes it tap-to-copy.
     await sendTelegram(
       chatId,
-      `RafRaf 🌿\nمعرّف الدردشة الخاص بك (Chat ID):\n${chatId}\n\nانسخه والصقه في: الإعدادات ← الإشعارات داخل التطبيق.`,
+      `RafRaf 🌿\nمعرّف الدردشة الخاص بك (Chat ID):\n<code>${chatId}</code>\n\nاضغط على الرقم لنسخه، ثم الصقه في: الإعدادات ← الإشعارات داخل التطبيق.`,
+      { parseMode: "HTML" },
     );
   }
 

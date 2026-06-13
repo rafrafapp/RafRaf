@@ -16,6 +16,7 @@ import {
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
 import { Spinner } from "@/components/Spinner";
+import { BackButton } from "@/components/BackButton";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -108,9 +109,7 @@ export function MobileCreditForm({
           <h1 className={styles.title}>📱 {m.title}</h1>
           <p className={styles.subtitle}>{m.subtitle}</p>
         </div>
-        <Link href="/dashboard" className={styles.back}>
-          {tx.list.title}
-        </Link>
+        <BackButton label={common.back} />
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}

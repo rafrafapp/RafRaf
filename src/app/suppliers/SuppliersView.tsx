@@ -10,6 +10,7 @@ import { useSync } from "@/lib/offline/useSync";
 import { safeDisplay } from "@/lib/validation/sanitize";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncStatus } from "@/components/SyncStatus";
+import { BackButton } from "@/components/BackButton";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -116,6 +117,9 @@ export function SuppliersView({
 
       <div className={styles.titleRow}>
         <div>
+          <div style={{ marginBlockEnd: "0.5rem" }}>
+            <BackButton label={common.back} />
+          </div>
           <h1 className={styles.title}>{s.title}</h1>
           <p className={styles.subtitle}>{s.subtitle}</p>
         </div>
