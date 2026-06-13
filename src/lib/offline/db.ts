@@ -100,6 +100,10 @@ export interface LocalTransaction {
   // so historical reports use the rate that was true when the sale happened.
   exchange_rate: number;
   amount_syp: number;
+  // The product's cost_price (base SYP) AT TIME OF SALE — frozen so editing a
+  // product's cost later never changes a past invoice's profit. 0 for non-product
+  // rows. Reports compute COGS/profit from this, not the current product cost.
+  cost_price_snapshot: number;
   note: string | null;
   group_uuid: string | null;
   created_at: string;

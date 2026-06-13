@@ -128,7 +128,17 @@ export function computeReport(opts: {
         cashIn += paidSyp; // credit sale → paid 0 (cash arrives via debt_payment)
         itemsSold += qty;
         invoiceKeys.add(t.group_uuid ?? t.client_uuid);
-        if (t.product_id) cogs += (costById.get(t.product_id) ?? 0) * qty;
+        // COGS from the cost SNAPSHOT (base SYP, frozen at sale time) so editing a
+        // product's cost later never changes this sale's profit. Fall back to the
+        // current product cost only for old rows with no snapshot yet (≤ 0).
+        const snapCost = num(t.cost_price_snapshot);
+        const unitCost =
+          snapCost > 0
+            ? snapCost
+            : t.product_id
+              ? (costById.get(t.product_id) ?? 0)
+              : 0;
+        cogs += unitCost * qty;
         const key = t.product_id ?? `name:${t.product_name ?? "?"}`;
         const s = sellers.get(key) ?? {
           key,

@@ -169,21 +169,34 @@ export function InvoiceView({
           </div>
 
           <ul className={styles.invoiceLines}>
-            {lines.map((l) => (
-              <li key={l.client_uuid} className={styles.invoiceLine}>
-                <span className={styles.invoiceLineName}>
-                  {safeDisplay(l.product_name ?? types[l.type])}{" "}
-                  {(l.qty > 0 || l.price > 0) && (
-                    <span className={styles.invoiceLineQty}>
-                      ({nf.format(l.qty)} × {nf.format(l.price)})
+            {lines.map((l) => {
+              const lineCost = Number(l.cost_price_snapshot) || 0;
+              const lineProfit =
+                Number(l.total) * txRate - lineCost * Number(l.qty);
+              return (
+                <li key={l.client_uuid} className={styles.invoiceLine}>
+                  <div>
+                    <span className={styles.invoiceLineName}>
+                      {safeDisplay(l.product_name ?? types[l.type])}{" "}
+                      {(l.qty > 0 || l.price > 0) && (
+                        <span className={styles.invoiceLineQty}>
+                          ({nf.format(l.qty)} × {nf.format(l.price)})
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-                <span>
-                  {nf.format(Number(l.total))} {cur}
-                </span>
-              </li>
-            ))}
+                    {isSell && l.product_id && (
+                      <div className={styles.invoiceLineQty}>
+                        {tx.costAtSale}: {nf.format(lineCost)} {baseSym} ·{" "}
+                        {tx.profit}: {nf.format(lineProfit)} {baseSym}
+                      </div>
+                    )}
+                  </div>
+                  <span>
+                    {nf.format(Number(l.total))} {cur}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
 
           <div className={styles.invoiceTotalRow}>

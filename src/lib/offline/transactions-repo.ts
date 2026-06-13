@@ -95,6 +95,12 @@ export async function recordSale(opts: {
   await db.transaction("rw", db.transactions, db.products, db.customers, async () => {
     for (let i = 0; i < opts.lines.length; i++) {
       const line = opts.lines[i];
+      // Snapshot the product's cost (base SYP) NOW, so a later cost edit can't
+      // change this invoice's profit. Read from the local product mirror.
+      const prod = line.product_id
+        ? await db.products.get(line.product_id)
+        : null;
+      const cost = prod ? Number(prod.cost_price) || 0 : 0;
       const tx: LocalTransaction = {
         client_uuid: crypto.randomUUID(),
         id: null,
@@ -113,6 +119,7 @@ export async function recordSale(opts: {
         currency: opts.currency,
         exchange_rate: rate,
         amount_syp: totals[i] * rate,
+        cost_price_snapshot: cost,
         note: opts.note ?? null,
         group_uuid: group,
         created_at: now,
@@ -174,6 +181,10 @@ export async function recordTransaction(opts: {
         ? -qty
         : 0;
 
+  // Snapshot the product's current cost (base SYP) for product-linked rows.
+  const prod = opts.product_id ? await db.products.get(opts.product_id) : null;
+  const costSnap = prod ? Number(prod.cost_price) || 0 : 0;
+
   const tx: LocalTransaction = {
     client_uuid: crypto.randomUUID(),
     id: null,
@@ -192,6 +203,7 @@ export async function recordTransaction(opts: {
     currency: opts.currency,
     exchange_rate: rate,
     amount_syp: total * rate,
+    cost_price_snapshot: costSnap,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -255,6 +267,7 @@ export async function recordDebtPayment(opts: {
     currency: opts.currency,
     exchange_rate: rate,
     amount_syp: opts.amount * rate,
+    cost_price_snapshot: 0,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -295,6 +308,7 @@ export async function recordSupplierPayment(opts: {
     currency: opts.currency,
     exchange_rate: rate,
     amount_syp: opts.amount * rate,
+    cost_price_snapshot: 0,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -342,6 +356,7 @@ export async function recordMobileCredit(opts: {
     currency: opts.currency,
     exchange_rate: 1,
     amount_syp: total,
+    cost_price_snapshot: 0,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -383,6 +398,7 @@ export async function recordShamCash(opts: {
     currency: opts.currency,
     exchange_rate: 1,
     amount_syp: total,
+    cost_price_snapshot: 0,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -425,6 +441,7 @@ export async function recordShamCashVoid(opts: {
     currency: o.currency,
     exchange_rate: o.exchange_rate ?? 1,
     amount_syp: o.amount_syp ?? o.total,
+    cost_price_snapshot: 0,
     note: `${VOID_NOTE_PREFIX}${o.client_uuid}`,
     group_uuid: null,
     created_at: nowIso(),

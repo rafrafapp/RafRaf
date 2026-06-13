@@ -320,6 +320,8 @@
     "currency": "Currency",
     "inBase": "In SYP",
     "rateLabel": "Exchange rate",
+    "costAtSale": "Cost at sale",
+    "profit": "Profit",
     "types": {
       "sell": "Sale",
       "buy": "Purchase",

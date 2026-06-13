@@ -263,6 +263,7 @@ type ServerTransaction = {
   currency: string;
   exchange_rate: number | string;
   amount_syp: number | string | null;
+  cost_price_snapshot: number | string | null;
   note: string | null;
   group_uuid: string | null;
   client_uuid: string | null;
@@ -270,7 +271,7 @@ type ServerTransaction = {
 };
 
 const TX_COLUMNS =
-  "id,merchant_id,type,product_id,product_name,qty,price,total,discount,paid,customer_id,supplier_id,payment,currency,exchange_rate,amount_syp,note,group_uuid,client_uuid,created_at";
+  "id,merchant_id,type,product_id,product_name,qty,price,total,discount,paid,customer_id,supplier_id,payment,currency,exchange_rate,amount_syp,cost_price_snapshot,note,group_uuid,client_uuid,created_at";
 
 function toLocalTxSynced(s: ServerTransaction): LocalTransaction {
   const rate = Number(s.exchange_rate ?? 1) || 1;
@@ -292,6 +293,8 @@ function toLocalTxSynced(s: ServerTransaction): LocalTransaction {
     currency: s.currency,
     exchange_rate: rate,
     amount_syp: s.amount_syp != null ? Number(s.amount_syp) : Number(s.total) * rate,
+    cost_price_snapshot:
+      s.cost_price_snapshot != null ? Number(s.cost_price_snapshot) : 0,
     note: s.note,
     group_uuid: s.group_uuid,
     created_at: s.created_at,
@@ -340,6 +343,8 @@ export async function pushPendingTransactions(
       p_group_uuid: t.group_uuid,
       p_paid: t.paid,
       p_exchange_rate: t.exchange_rate ?? 1,
+      // Sale-time cost snapshot (offline-accurate); RPC falls back to product cost.
+      p_cost_price_snapshot: t.cost_price_snapshot ?? null,
     });
     if (!error && data) {
       const s = data as ServerTransaction;
@@ -351,6 +356,8 @@ export async function pushPendingTransactions(
         exchange_rate: rate,
         amount_syp:
           s.amount_syp != null ? Number(s.amount_syp) : Number(s.total) * rate,
+        cost_price_snapshot:
+          s.cost_price_snapshot != null ? Number(s.cost_price_snapshot) : 0,
         created_at: s.created_at,
         _sync: "synced",
       });
