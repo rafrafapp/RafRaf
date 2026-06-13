@@ -68,6 +68,7 @@ async function bumpStock(productId: string, delta: number): Promise<void> {
 export async function recordSale(opts: {
   merchantId: string;
   currency: string;
+  exchangeRate?: number; // base (SYP) per 1 unit of `currency`; default 1
   payment: PaymentMethod;
   note?: string | null;
   lines: CartLine[];
@@ -78,6 +79,7 @@ export async function recordSale(opts: {
   const db = getDb();
   const group = crypto.randomUUID();
   const now = nowIso();
+  const rate = opts.exchangeRate ?? 1;
   const customerId = opts.customerId ?? null;
 
   const totals = opts.lines.map(lineTotal);
@@ -109,6 +111,8 @@ export async function recordSale(opts: {
         supplier_id: null,
         payment: opts.payment,
         currency: opts.currency,
+        exchange_rate: rate,
+        amount_syp: totals[i] * rate,
         note: opts.note ?? null,
         group_uuid: group,
         created_at: now,
@@ -117,9 +121,9 @@ export async function recordSale(opts: {
       await db.transactions.put(tx);
       if (line.product_id) await bumpStock(line.product_id, -line.qty);
     }
-    // Optimistic debt: the unpaid remainder of a credit/partial sale.
+    // Optimistic debt (tracked in base SYP): the unpaid remainder × rate.
     if (customerId) {
-      const debtDelta = invoiceTotal - paidNow;
+      const debtDelta = (invoiceTotal - paidNow) * rate;
       if (debtDelta !== 0) await bumpDebt(customerId, debtDelta);
     }
   });
@@ -133,6 +137,7 @@ export async function recordTransaction(opts: {
   merchantId: string;
   type: Exclude<TxType, "sell" | "debt_payment" | "supplier_payment">;
   currency: string;
+  exchangeRate?: number; // base (SYP) per 1 unit of `currency`; default 1
   product_id?: string | null;
   product_name?: string | null;
   qty?: number;
@@ -146,6 +151,7 @@ export async function recordTransaction(opts: {
 }): Promise<void> {
   transactionInputSchema.parse(opts);
   const db = getDb();
+  const rate = opts.exchangeRate ?? 1;
   const qty = opts.qty ?? 0;
   const price = opts.price ?? 0;
   const total = opts.type === "expense" ? (opts.total ?? 0) : qty * price;
@@ -184,6 +190,8 @@ export async function recordTransaction(opts: {
     supplier_id: supplierId,
     payment,
     currency: opts.currency,
+    exchange_rate: rate,
+    amount_syp: total * rate,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -200,17 +208,17 @@ export async function recordTransaction(opts: {
       await db.transactions.put(tx);
       if (opts.product_id && stockDelta !== 0)
         await bumpStock(opts.product_id, stockDelta);
-      // Party balances (mirror the RPC): buy on credit raises what we owe the
-      // supplier; a customer return lowers the customer's debt; a supplier return
-      // lowers what we owe.
+      // Party balances (mirror the RPC), tracked in base SYP (× rate): buy on
+      // credit raises what we owe the supplier; a customer return lowers the
+      // customer's debt; a supplier return lowers what we owe.
       if (supplierId && opts.type === "buy") {
-        const owed = total - paid;
+        const owed = (total - paid) * rate;
         if (owed !== 0) await bumpOwed(supplierId, owed);
       }
       if (customerId && opts.type === "return_customer")
-        await bumpDebt(customerId, -total);
+        await bumpDebt(customerId, -total * rate);
       if (supplierId && opts.type === "return_supplier")
-        await bumpOwed(supplierId, -total);
+        await bumpOwed(supplierId, -total * rate);
     },
   );
 }
@@ -223,10 +231,12 @@ export async function recordDebtPayment(opts: {
   customerId: string;
   amount: number;
   currency: string;
+  exchangeRate?: number;
   note?: string | null;
 }): Promise<void> {
   settlementInputSchema.parse(opts);
   const db = getDb();
+  const rate = opts.exchangeRate ?? 1;
   const tx: LocalTransaction = {
     client_uuid: crypto.randomUUID(),
     id: null,
@@ -243,6 +253,8 @@ export async function recordDebtPayment(opts: {
     supplier_id: null,
     payment: "cash",
     currency: opts.currency,
+    exchange_rate: rate,
+    amount_syp: opts.amount * rate,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -250,7 +262,7 @@ export async function recordDebtPayment(opts: {
   };
   await db.transaction("rw", db.transactions, db.customers, async () => {
     await db.transactions.put(tx);
-    await bumpDebt(opts.customerId, -opts.amount);
+    await bumpDebt(opts.customerId, -opts.amount * rate);
   });
 }
 
@@ -259,10 +271,12 @@ export async function recordSupplierPayment(opts: {
   supplierId: string;
   amount: number;
   currency: string;
+  exchangeRate?: number;
   note?: string | null;
 }): Promise<void> {
   settlementInputSchema.parse(opts);
   const db = getDb();
+  const rate = opts.exchangeRate ?? 1;
   const tx: LocalTransaction = {
     client_uuid: crypto.randomUUID(),
     id: null,
@@ -279,6 +293,8 @@ export async function recordSupplierPayment(opts: {
     supplier_id: opts.supplierId,
     payment: "cash",
     currency: opts.currency,
+    exchange_rate: rate,
+    amount_syp: opts.amount * rate,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -286,7 +302,7 @@ export async function recordSupplierPayment(opts: {
   };
   await db.transaction("rw", db.transactions, db.suppliers, async () => {
     await db.transactions.put(tx);
-    await bumpOwed(opts.supplierId, -opts.amount);
+    await bumpOwed(opts.supplierId, -opts.amount * rate);
   });
 }
 
@@ -324,6 +340,8 @@ export async function recordMobileCredit(opts: {
     supplier_id: null,
     payment,
     currency: opts.currency,
+    exchange_rate: 1,
+    amount_syp: total,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -363,6 +381,8 @@ export async function recordShamCash(opts: {
     supplier_id: null,
     payment,
     currency: opts.currency,
+    exchange_rate: 1,
+    amount_syp: total,
     note: opts.note ?? null,
     group_uuid: null,
     created_at: nowIso(),
@@ -403,6 +423,8 @@ export async function recordShamCashVoid(opts: {
     supplier_id: null,
     payment: o.payment,
     currency: o.currency,
+    exchange_rate: o.exchange_rate ?? 1,
+    amount_syp: o.amount_syp ?? o.total,
     note: `${VOID_NOTE_PREFIX}${o.client_uuid}`,
     group_uuid: null,
     created_at: nowIso(),
@@ -497,12 +519,15 @@ export function customerDebtStart(ledger: LocalTransaction[]): string | null {
   let balance = 0;
   let start: string | null = null;
   for (const t of events) {
+    // debt_balance is tracked in base SYP, so age it in SYP too (× the rate at
+    // time of the transaction).
+    const rate = Number(t.exchange_rate ?? 1) || 1;
     const delta =
-      t.type === "sell"
+      (t.type === "sell"
         ? Number(t.total) - Number(t.paid)
         : t.type === "return_customer" || t.type === "debt_payment"
           ? -Number(t.total)
-          : 0;
+          : 0) * rate;
     if (delta === 0) continue;
     const prev = balance;
     balance += delta;

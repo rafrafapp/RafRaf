@@ -58,6 +58,22 @@ export async function createStore(
     return { error: "failed" };
   }
 
+  // Seed the SYP base currency (multi-currency). Idempotent via the unique
+  // (merchant_id, code) index; best-effort so it never blocks onboarding.
+  try {
+    await supabase.from("merchant_currencies").insert({
+      merchant_id: user.id,
+      code: "SYP",
+      name_ar: "ليرة سورية",
+      name_en: "Syrian Pound",
+      rate_to_base: 1,
+      is_base: true,
+      symbol: "ل.س",
+    });
+  } catch {
+    // swallow — backfilled/retried elsewhere
+  }
+
   // Best-effort backup-sheet provisioning. Never block onboarding on it — if it
   // fails (or Google isn't configured), the nightly cron creates the sheet on the
   // merchant's first backup run.

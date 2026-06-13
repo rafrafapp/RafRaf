@@ -17,6 +17,8 @@ export type SellerStat = {
 export type CategoryStat = { key: string; label: string; total: number };
 export type DayStat = { day: string; total: number }; // day = YYYY-MM-DD (local)
 export type PartyStat = { id: string; name: string; amount: number };
+// Per-currency sales: original amount in that currency + its SYP-equivalent.
+export type CurrencyStat = { code: string; total: number; totalSyp: number };
 
 export type ReportSummary = {
   // Period totals
@@ -46,6 +48,9 @@ export type ReportSummary = {
   supplierSpend: PartyStat[];
   topDebtors: PartyStat[];
   trend: DayStat[];
+  // Sales split by the currency they were made in (original + SYP). All the money
+  // totals above are in base SYP (converted at each transaction's stored rate).
+  byCurrency: CurrencyStat[];
 };
 
 function num(v: number | string | null | undefined): number {
@@ -98,17 +103,29 @@ export function computeReport(opts: {
   const sellers = new Map<string, SellerStat>();
   const expenseCats = new Map<string, CategoryStat>();
   const supplierSpend = new Map<string, PartyStat>();
+  const salesByCurrency = new Map<string, CurrencyStat>();
+
+  // All money totals are aggregated in base SYP using each row's stored rate, so
+  // figures stay coherent across currencies and across time (a sale's rate is
+  // snapshotted at sale time). `total`/`paid` are the original-currency amounts.
+  const sypOf = (t: LocalTransaction) =>
+    t.amount_syp != null
+      ? num(t.amount_syp)
+      : num(t.total) * (num(t.exchange_rate) || 1);
 
   for (const t of inRange) {
-    const total = num(t.total);
-    const paid = num(t.paid);
+    const total = num(t.total); // original currency
+    const paid = num(t.paid); // original currency
     const qty = num(t.qty);
     const price = num(t.price);
+    const rate = num(t.exchange_rate) || 1;
+    const tsyp = sypOf(t); // SYP-equivalent of `total`
+    const paidSyp = paid * rate;
 
     switch (t.type) {
       case "sell": {
-        sales += total;
-        cashIn += paid; // credit sale → paid 0 (cash arrives via debt_payment)
+        sales += tsyp;
+        cashIn += paidSyp; // credit sale → paid 0 (cash arrives via debt_payment)
         itemsSold += qty;
         invoiceKeys.add(t.group_uuid ?? t.client_uuid);
         if (t.product_id) cogs += (costById.get(t.product_id) ?? 0) * qty;
@@ -120,65 +137,70 @@ export function computeReport(opts: {
           revenue: 0,
         };
         s.qty += qty;
-        s.revenue += total;
+        s.revenue += tsyp;
         sellers.set(key, s);
+        const cur = t.currency || "SYP";
+        const cs = salesByCurrency.get(cur) ?? { code: cur, total: 0, totalSyp: 0 };
+        cs.total += total;
+        cs.totalSyp += tsyp;
+        salesByCurrency.set(cur, cs);
         break;
       }
       case "buy": {
-        purchases += total;
-        cashOut += paid;
+        purchases += tsyp;
+        cashOut += paidSyp;
         if (t.supplier_id) {
           const sp = supplierSpend.get(t.supplier_id) ?? {
             id: t.supplier_id,
             name: supplierNameById.get(t.supplier_id) ?? "—",
             amount: 0,
           };
-          sp.amount += total;
+          sp.amount += tsyp;
           supplierSpend.set(t.supplier_id, sp);
         }
         break;
       }
       case "expense": {
-        expenses += total;
-        cashOut += total;
+        expenses += tsyp;
+        cashOut += tsyp;
         const label = t.product_name ?? t.note ?? "—";
         const key = label;
         const c = expenseCats.get(key) ?? { key, label, total: 0 };
-        c.total += total;
+        c.total += tsyp;
         expenseCats.set(key, c);
         break;
       }
       case "debt_payment":
-        cashIn += total;
-        debtCollected += total;
+        cashIn += tsyp;
+        debtCollected += tsyp;
         break;
       case "return_supplier":
-        cashIn += total;
+        cashIn += tsyp;
         break;
       case "return_customer":
-        cashOut += total;
+        cashOut += tsyp;
         break;
       case "supplier_payment":
-        cashOut += total;
+        cashOut += tsyp;
         break;
       case "mobile_credit": {
-        serviceRevenue += total;
-        serviceIncome += total - price; // profit = amount_sold − cost
-        cashIn += paid;
+        serviceRevenue += tsyp;
+        serviceIncome += (total - price) * rate; // profit = amount_sold − cost
+        cashIn += paidSyp;
         break;
       }
       case "sham_cash": {
-        serviceRevenue += total;
-        serviceIncome += total - qty * price; // commission = total − usd×rate
-        cashIn += paid;
+        serviceRevenue += tsyp;
+        serviceIncome += (total - qty * price) * rate; // commission
+        cashIn += paidSyp;
         break;
       }
       case "sham_cash_void": {
         // Reversal of a sham_cash row: negate its revenue, commission and the cash
         // that was received (money goes back out).
-        serviceRevenue -= total;
-        serviceIncome -= total - qty * price;
-        cashOut += paid;
+        serviceRevenue -= tsyp;
+        serviceIncome -= (total - qty * price) * rate;
+        cashOut += paidSyp;
         break;
       }
     }
@@ -240,7 +262,7 @@ export function computeReport(opts: {
   for (const t of inRange) {
     if (t.type !== "sell") continue;
     const k = dayKey(new Date(t.created_at).getTime());
-    byDay.set(k, (byDay.get(k) ?? 0) + num(t.total));
+    byDay.set(k, (byDay.get(k) ?? 0) + sypOf(t));
   }
   const spanDays = Math.ceil((range.to - range.from) / DAY_MS);
   let trend: DayStat[];
@@ -283,6 +305,9 @@ export function computeReport(opts: {
     supplierSpend: supplierSpendList,
     topDebtors: debtors.slice(0, 5),
     trend,
+    byCurrency: [...salesByCurrency.values()].sort(
+      (a, b) => b.totalSyp - a.totalSyp,
+    ),
   };
 }
 

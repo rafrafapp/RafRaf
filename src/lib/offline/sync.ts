@@ -5,6 +5,7 @@ import {
   type LocalTransaction,
   type LocalCustomer,
   type LocalSupplier,
+  type LocalMerchantCurrency,
   type ConflictRecord,
 } from "./db";
 import { createUploadSignature, deleteImage } from "@/lib/cloudinary/actions";
@@ -260,6 +261,8 @@ type ServerTransaction = {
   supplier_id: string | null;
   payment: LocalTransaction["payment"];
   currency: string;
+  exchange_rate: number | string;
+  amount_syp: number | string | null;
   note: string | null;
   group_uuid: string | null;
   client_uuid: string | null;
@@ -267,9 +270,10 @@ type ServerTransaction = {
 };
 
 const TX_COLUMNS =
-  "id,merchant_id,type,product_id,product_name,qty,price,total,discount,paid,customer_id,supplier_id,payment,currency,note,group_uuid,client_uuid,created_at";
+  "id,merchant_id,type,product_id,product_name,qty,price,total,discount,paid,customer_id,supplier_id,payment,currency,exchange_rate,amount_syp,note,group_uuid,client_uuid,created_at";
 
 function toLocalTxSynced(s: ServerTransaction): LocalTransaction {
+  const rate = Number(s.exchange_rate ?? 1) || 1;
   return {
     client_uuid: s.client_uuid as string,
     id: s.id,
@@ -286,6 +290,8 @@ function toLocalTxSynced(s: ServerTransaction): LocalTransaction {
     supplier_id: s.supplier_id ?? null,
     payment: s.payment,
     currency: s.currency,
+    exchange_rate: rate,
+    amount_syp: s.amount_syp != null ? Number(s.amount_syp) : Number(s.total) * rate,
     note: s.note,
     group_uuid: s.group_uuid,
     created_at: s.created_at,
@@ -333,13 +339,18 @@ export async function pushPendingTransactions(
       p_note: t.note,
       p_group_uuid: t.group_uuid,
       p_paid: t.paid,
+      p_exchange_rate: t.exchange_rate ?? 1,
     });
     if (!error && data) {
       const s = data as ServerTransaction;
+      const rate = Number(s.exchange_rate ?? 1) || 1;
       await db.transactions.update(t.client_uuid, {
         id: s.id,
         total: Number(s.total),
         paid: Number(s.paid ?? 0),
+        exchange_rate: rate,
+        amount_syp:
+          s.amount_syp != null ? Number(s.amount_syp) : Number(s.total) * rate,
         created_at: s.created_at,
         _sync: "synced",
       });
@@ -614,6 +625,134 @@ export async function pullSuppliers(merchantId: string): Promise<void> {
   });
 }
 
+// ---- Merchant currencies (multi-currency) ----------------------------------
+//
+// Standard offline-first contract (like products): every field is client-owned,
+// so it's a plain last-write-wins upsert/delete + LWW pull. No server-owned field.
+
+type ServerCurrency = {
+  id: string;
+  merchant_id: string;
+  code: string;
+  name_ar: string;
+  name_en: string;
+  rate_to_base: number | string;
+  is_base: boolean;
+  symbol: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+const CURRENCY_COLUMNS =
+  "id,merchant_id,code,name_ar,name_en,rate_to_base,is_base,symbol,is_active,created_at,updated_at";
+
+function toLocalCurrencySynced(s: ServerCurrency): LocalMerchantCurrency {
+  return {
+    id: s.id,
+    merchant_id: s.merchant_id,
+    code: s.code,
+    name_ar: s.name_ar,
+    name_en: s.name_en,
+    rate_to_base: Number(s.rate_to_base),
+    is_base: s.is_base,
+    symbol: s.symbol,
+    is_active: s.is_active,
+    created_at: s.created_at,
+    updated_at: s.updated_at,
+    _sync: "synced",
+    _op: "upsert",
+    _deleted: 0,
+    _base_updated_at: s.updated_at,
+  };
+}
+
+export async function pushPendingCurrencies(merchantId: string): Promise<void> {
+  const db = getDb();
+  const supabase = createClient();
+  const pending = await db.merchant_currencies
+    .where("[merchant_id+_sync]")
+    .equals([merchantId, "pending"])
+    .toArray();
+
+  for (const c of pending) {
+    if (c._op === "delete") {
+      const { error } = await supabase
+        .from("merchant_currencies")
+        .delete()
+        .eq("id", c.id);
+      if (!error) await db.merchant_currencies.delete(c.id);
+      continue;
+    }
+    const { data, error } = await supabase
+      .from("merchant_currencies")
+      .upsert(
+        {
+          id: c.id,
+          merchant_id: c.merchant_id,
+          code: c.code,
+          name_ar: c.name_ar,
+          name_en: c.name_en,
+          rate_to_base: c.rate_to_base,
+          is_base: c.is_base,
+          symbol: c.symbol,
+          is_active: c.is_active,
+        },
+        { onConflict: "id" },
+      )
+      .select(CURRENCY_COLUMNS)
+      .single();
+    if (!error && data)
+      await db.merchant_currencies.put(toLocalCurrencySynced(data as ServerCurrency));
+    // A duplicate (merchant_id, code) seeded server-side can reject the insert;
+    // it stays pending and is reconciled by the pull below.
+  }
+}
+
+export async function pullCurrencies(merchantId: string): Promise<void> {
+  const db = getDb();
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("merchant_currencies")
+    .select(CURRENCY_COLUMNS);
+  if (error || !data) return;
+  const server = data as ServerCurrency[];
+
+  await db.transaction("rw", db.merchant_currencies, async () => {
+    const locals = await db.merchant_currencies
+      .where("merchant_id")
+      .equals(merchantId)
+      .toArray();
+    const localById = new Map(locals.map((l) => [l.id, l]));
+    const serverIds = new Set<string>();
+
+    for (const s of server) {
+      serverIds.add(s.id);
+      const local = localById.get(s.id);
+      if (!local || local._sync === "synced") {
+        await db.merchant_currencies.put(toLocalCurrencySynced(s));
+        continue;
+      }
+      if (local._op === "delete") continue; // tombstone awaits push
+      if (local._base_updated_at && s.updated_at !== local._base_updated_at) {
+        const serverNewer =
+          new Date(s.updated_at).getTime() >
+          new Date(local.updated_at).getTime();
+        if (serverNewer) await db.merchant_currencies.put(toLocalCurrencySynced(s));
+        else
+          await db.merchant_currencies.update(local.id, {
+            _base_updated_at: s.updated_at,
+          });
+      }
+    }
+
+    for (const l of locals) {
+      if (!serverIds.has(l.id) && l._sync === "synced")
+        await db.merchant_currencies.delete(l.id);
+    }
+  });
+}
+
 // ---- Unified sync ----------------------------------------------------------
 
 // Serialize syncs; if one is requested mid-run, run another pass afterwards so a
@@ -639,11 +778,13 @@ export async function syncAll(merchantId: string): Promise<void> {
       //     then product edits.
       //  3) pull parties + products AFTER the ledger push, so the authoritative
       //     balances/stock the RPC just wrote aren't overwritten by a stale pull.
+      await pushPendingCurrencies(merchantId);
       await pushPendingCustomers(merchantId);
       await pushPendingSuppliers(merchantId);
       await pushPendingTransactions(merchantId);
       await pushPending(merchantId);
       await pushPendingProductImages(merchantId);
+      await pullCurrencies(merchantId);
       await pullCustomers(merchantId);
       await pullSuppliers(merchantId);
       await pullProducts(merchantId);

@@ -20,6 +20,9 @@ type Props = {
   lines: ReceiptLine[];
   total: number;
   invoiceNo?: string;
+  // When the sale is in a non-base currency, the SYP-equivalent total + base symbol.
+  sypTotal?: number | null;
+  baseSymbol?: string;
   labels: {
     title: string;
     print: string;
@@ -47,6 +50,8 @@ export function Receipt({
   lines,
   total,
   invoiceNo,
+  sypTotal,
+  baseSymbol,
   labels,
   onClose,
 }: Props) {
@@ -70,6 +75,9 @@ export function Receipt({
       body,
       sep,
       `${labels.total}: ${nf.format(total)} ${currency}`,
+      ...(sypTotal != null
+        ? [`≈ ${nf.format(sypTotal)} ${baseSymbol ?? ""}`]
+        : []),
       labels.thanks,
     ].join("\n");
   }
@@ -111,6 +119,9 @@ export function Receipt({
         `<h1>${safeHtml(storeName)}</h1>${invoiceNo ? `<div class="d">${escapeHtml(invoiceNo)}</div>` : ""}<div class="d">${escapeHtml(dateStr)}</div>` +
         `<table>${rows}</table>` +
         `<div class="t"><span>${escapeHtml(labels.total)}</span><span>${nf.format(total)} ${safeHtml(currency)}</span></div>` +
+        (sypTotal != null
+          ? `<div class="th">≈ ${nf.format(sypTotal)} ${safeHtml(baseSymbol ?? "")}</div>`
+          : "") +
         `<div class="th">${escapeHtml(labels.thanks)}</div>` +
         `</body></html>`,
     );
@@ -153,6 +164,11 @@ export function Receipt({
             {nf.format(total)} {currency}
           </span>
         </div>
+        {sypTotal != null && (
+          <p className={styles.receiptDate}>
+            ≈ {nf.format(sypTotal)} {baseSymbol}
+          </p>
+        )}
         <p className={styles.receiptThanks}>{labels.thanks}</p>
         <div className={styles.receiptActions}>
           <button type="button" className={styles.btnGhost} onClick={print}>

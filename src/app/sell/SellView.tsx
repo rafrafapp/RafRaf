@@ -14,6 +14,9 @@ import {
 import { syncAll } from "@/lib/offline/sync";
 import { useSync } from "@/lib/offline/useSync";
 import { PAYMENT_METHODS } from "@/lib/validation/transaction";
+import { fromBase, toBase } from "@/lib/validation/currency";
+import { useCurrencies, rateFor } from "@/lib/offline/useCurrencies";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
 import { ProductPicker } from "@/components/ProductPicker";
@@ -25,6 +28,7 @@ import { notifyOversell } from "@/lib/messaging/actions";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 type Props = {
   merchantId: string;
@@ -60,6 +64,17 @@ export function SellView({
   scanLabels,
 }: Props) {
   const { online, syncing, sync } = useSync(merchantId);
+  const { currencies, base } = useCurrencies(merchantId);
+  const [currencyCode, setCurrencyCode] = useState<string>("");
+  // Resolve the active currency (falls back to the base while loading).
+  const selected =
+    currencies.find((c) => c.code === currencyCode) ?? base ?? null;
+  const code = selected?.code ?? "SYP";
+  const rate = selected ? Number(selected.rate_to_base) || 1 : 1;
+  const symbol = selected?.symbol ?? "ل.س";
+  const baseSymbol = base?.symbol ?? "ل.س";
+  const isBase = !selected || selected.is_base;
+
   const [cart, setCart] = useState<CartLine[]>([]);
   const [payment, setPayment] = useState<PaymentMethod>("cash");
   const [customer, setCustomer] = useState<Party | null>(null);
@@ -75,6 +90,8 @@ export function SellView({
     total: number;
     date: string;
     invoiceNo: string;
+    currencySymbol: string;
+    sypTotal: number | null;
   } | null>(null);
   const [saving, setSaving] = useState(false);
   // Synchronous re-entrancy guard: complete() awaits a Dexie stock read before
@@ -98,11 +115,27 @@ export function SellView({
           product_id: p.id,
           product_name: p.name,
           qty: 1,
-          price: Number(p.sell_price),
+          // Catalog prices are in base (SYP); convert to the chosen currency.
+          price: round2(fromBase(Number(p.sell_price), rate)),
           discount: 0,
         },
       ];
     });
+  }
+
+  // Switch the invoice currency: re-express every existing line price in the new
+  // currency (via base) so the cart stays consistent.
+  function changeCurrency(newCode: string) {
+    const oldRate = rate;
+    const newRate = rateFor(currencies, newCode);
+    setCart((prev) =>
+      prev.map((l) => ({
+        ...l,
+        price: round2(fromBase(toBase(l.price, oldRate), newRate)),
+      })),
+    );
+    setPaid("");
+    setCurrencyCode(newCode);
   }
 
   function updateLine(index: number, patch: Partial<CartLine>) {
@@ -146,7 +179,8 @@ export function SellView({
     try {
       const group = await recordSale({
         merchantId,
-        currency,
+        currency: code,
+        exchangeRate: rate,
         payment,
         note: note.trim() || null,
         lines: cart,
@@ -165,11 +199,14 @@ export function SellView({
         .equals(merchantId)
         .toArray();
       const invoiceNo = formatInvoiceNo(buildInvoiceNumbers(allTx).get(group));
+      const recTotal = lines.reduce((sum, l) => sum + l.total, 0);
       setReceipt({
         lines,
-        total: lines.reduce((sum, l) => sum + l.total, 0),
+        total: recTotal,
         date: new Date().toISOString(),
         invoiceNo,
+        currencySymbol: symbol,
+        sypTotal: isBase ? null : recTotal * rate,
       });
       setCart([]);
       setNote("");
@@ -300,13 +337,26 @@ export function SellView({
               <div className={styles.lineFoot}>
                 <span className={styles.muted}>{s.total}</span>
                 <span className={styles.lineTotal}>
-                  {nf.format(lineTotal(l))} {currency}
+                  {nf.format(lineTotal(l))} {symbol}
                 </span>
               </div>
             </div>
           ))}
 
           <div className={styles.summary}>
+            {currencies.length > 1 && (
+              <label className={styles.label}>
+                {tx.currency}
+                <CurrencySelect
+                  currencies={currencies}
+                  value={code}
+                  onChange={changeCurrency}
+                  locale={locale}
+                  className={styles.input}
+                />
+              </label>
+            )}
+
             <div className={styles.segment}>
               {PAYMENT_METHODS.map((m) => (
                 <button
@@ -337,7 +387,7 @@ export function SellView({
 
             {payment === "partial" && (
               <label className={styles.label}>
-                {s.paidNow} ({currency})
+                {s.paidNow} ({symbol})
                 <input
                   className={styles.input}
                   type="number"
@@ -361,7 +411,7 @@ export function SellView({
                         ? total
                         : Math.max(0, total - (Number(paid) || 0)),
                     )}{" "}
-                    {currency}
+                    {symbol}
                   </span>
                 </div>
               ) : (
@@ -378,9 +428,17 @@ export function SellView({
             <div className={styles.totalRow}>
               <span className={styles.totalLabel}>{s.total}</span>
               <span className={styles.totalValue}>
-                {nf.format(total)} {currency}
+                {nf.format(total)} {symbol}
               </span>
             </div>
+            {!isBase && (
+              <div className={styles.totalRow}>
+                <span className={styles.muted}>{tx.inBase}</span>
+                <span className={styles.muted}>
+                  ≈ {nf.format(total * rate)} {baseSymbol}
+                </span>
+              </div>
+            )}
             <button
               type="button"
               className={styles.submit}
@@ -452,12 +510,14 @@ export function SellView({
       {receipt && (
         <Receipt
           storeName={storeName}
-          currency={currency}
+          currency={receipt.currencySymbol}
           locale={locale}
           dateIso={receipt.date}
           lines={receipt.lines}
           total={receipt.total}
           invoiceNo={receipt.invoiceNo}
+          sypTotal={receipt.sypTotal}
+          baseSymbol={baseSymbol}
           labels={{
             title: tx.receipt.title,
             print: tx.receipt.print,

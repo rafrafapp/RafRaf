@@ -6,6 +6,7 @@ import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb } from "@/lib/offline/db";
 import { useSync } from "@/lib/offline/useSync";
+import { useCurrencies, symbolFor } from "@/lib/offline/useCurrencies";
 import {
   getInvoice,
   buildInvoiceNumbers,
@@ -34,13 +35,13 @@ export function InvoiceView({
   id,
   merchantId,
   storeName,
-  currency,
   locale,
   appName,
   tx,
   common,
 }: Props) {
   useSync(merchantId);
+  const { currencies, base } = useCurrencies(merchantId);
   const [showReceipt, setShowReceipt] = useState(false);
 
   const rows = useLiveQuery(() => getInvoice(merchantId, id), [merchantId, id]);
@@ -70,6 +71,13 @@ export function InvoiceView({
   const total = lines.reduce((sum, l) => sum + Number(l.total), 0);
   const paid = lines.reduce((sum, l) => sum + Number(l.paid), 0);
   const remaining = total - paid;
+  // Multi-currency: this invoice's own currency + the snapshotted rate.
+  const txCur = first?.currency ?? "SYP";
+  const txRate = Number(first?.exchange_rate ?? 1) || 1;
+  const cur = symbolFor(currencies, txCur);
+  const baseSym = base?.symbol ?? "ل.س";
+  const isBaseTx = txRate === 1;
+  const totalSyp = total * txRate;
   const isSell = first?.type === "sell";
   const group = first?.group_uuid ?? null;
   const invoiceNo = group
@@ -148,6 +156,16 @@ export function InvoiceView({
             )}
             <span className={styles.invoiceMetaKey}>{s.items}</span>
             <span className={styles.invoiceMetaVal}>{nf.format(lines.length)}</span>
+            {!isBaseTx && (
+              <>
+                <span className={styles.invoiceMetaKey}>{tx.currency}</span>
+                <span className={styles.invoiceMetaVal}>{txCur}</span>
+                <span className={styles.invoiceMetaKey}>{tx.rateLabel}</span>
+                <span className={styles.invoiceMetaVal}>
+                  1 {txCur} = {nf.format(txRate)} {baseSym}
+                </span>
+              </>
+            )}
           </div>
 
           <ul className={styles.invoiceLines}>
@@ -162,7 +180,7 @@ export function InvoiceView({
                   )}
                 </span>
                 <span>
-                  {nf.format(Number(l.total))} {currency}
+                  {nf.format(Number(l.total))} {cur}
                 </span>
               </li>
             ))}
@@ -171,19 +189,27 @@ export function InvoiceView({
           <div className={styles.invoiceTotalRow}>
             <span>{s.total}</span>
             <span>
-              {nf.format(total)} {currency}
+              {nf.format(total)} {cur}
             </span>
           </div>
+          {!isBaseTx && (
+            <div className={styles.invoiceTotalRow}>
+              <span className={styles.invoiceMetaKey}>{tx.inBase}</span>
+              <span className={styles.invoiceMetaKey}>
+                ≈ {nf.format(totalSyp)} {baseSym}
+              </span>
+            </div>
+          )}
 
           {paid > 0 && paid < total && (
             <div className={styles.invoiceMetaGrid}>
               <span className={styles.invoiceMetaKey}>{s.paidNow}</span>
               <span className={styles.invoiceMetaVal}>
-                {nf.format(paid)} {currency}
+                {nf.format(paid)} {cur}
               </span>
               <span className={styles.invoiceMetaKey}>{s.remaining}</span>
               <span className={styles.invoiceMetaVal}>
-                {nf.format(remaining)} {currency}
+                {nf.format(remaining)} {cur}
               </span>
             </div>
           )}
@@ -207,11 +233,14 @@ export function InvoiceView({
       {showReceipt && first && (
         <Receipt
           storeName={storeName}
-          currency={currency}
+          currency={cur}
           locale={locale}
           dateIso={first.created_at}
           lines={receiptLines}
           total={total}
+          invoiceNo={invoiceNo}
+          sypTotal={isBaseTx ? null : totalSyp}
+          baseSymbol={baseSym}
           labels={{
             title: tx.receipt.title,
             print: tx.receipt.print,

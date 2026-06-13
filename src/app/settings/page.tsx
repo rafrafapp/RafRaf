@@ -7,6 +7,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SettingsForm } from "./SettingsForm";
 import { PasswordChangeForm } from "./PasswordChangeForm";
 import { LogoUpload } from "./LogoUpload";
+import { CurrenciesSection } from "./CurrenciesSection";
 import styles from "@/app/products/product-form.module.css";
 
 export default async function SettingsPage() {
@@ -49,6 +50,15 @@ export default async function SettingsPage() {
           settings={dict.settings}
           common={dict.common}
           botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? null}
+        />
+      </div>
+
+      <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
+        <h1 className={styles.title}>{dict.settings.currencies.title}</h1>
+        <CurrenciesSection
+          merchantId={merchant.id}
+          locale={locale}
+          labels={dict.settings.currencies}
         />
       </div>
 

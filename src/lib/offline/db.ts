@@ -94,7 +94,12 @@ export interface LocalTransaction {
   customer_id: string | null;
   supplier_id: string | null;
   payment: PaymentMethod;
-  currency: string;
+  currency: string; // the transaction's currency code (reused as currency_code)
+  // Multi-currency: the rate (base/SYP per 1 unit of `currency`) at the moment of
+  // the transaction, and the SYP-equivalent (= total × exchange_rate). Snapshotted
+  // so historical reports use the rate that was true when the sale happened.
+  exchange_rate: number;
+  amount_syp: number;
   note: string | null;
   group_uuid: string | null;
   created_at: string;
@@ -138,6 +143,29 @@ export interface LocalSupplier {
   _base_updated_at: string | null;
 }
 
+// A merchant currency as stored in IndexedDB. Unlike product stock / party
+// balances, EVERY field here is client-owned (the merchant edits the rate, symbol,
+// active flag) — so it syncs last-write-wins like a product, no server-owned field.
+// `code` + `is_base` are immutable after creation. `rate_to_base` = base (SYP) per
+// 1 unit of this currency; the base currency (SYP) always has rate 1.
+export interface LocalMerchantCurrency {
+  id: string;
+  merchant_id: string;
+  code: string;
+  name_ar: string;
+  name_en: string;
+  rate_to_base: number;
+  is_base: boolean;
+  symbol: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  _sync: SyncState;
+  _op: SyncOp;
+  _deleted: 0 | 1;
+  _base_updated_at: string | null;
+}
+
 class RafRafDB extends Dexie {
   products!: Table<LocalProduct, string>;
   conflicts!: Table<ConflictRecord, string>;
@@ -145,6 +173,7 @@ class RafRafDB extends Dexie {
   customers!: Table<LocalCustomer, string>;
   suppliers!: Table<LocalSupplier, string>;
   product_images!: Table<LocalProductImage, string>;
+  merchant_currencies!: Table<LocalMerchantCurrency, string>;
 
   constructor() {
     super("rafraf");
@@ -173,6 +202,11 @@ class RafRafDB extends Dexie {
     // when a foreground upload failed), awaiting upload to Cloudinary on sync.
     this.version(4).stores({
       product_images: "product_id, merchant_id",
+    });
+    // v5 adds merchant_currencies (multi-currency) — mirrored + synced like products.
+    this.version(5).stores({
+      merchant_currencies:
+        "id, merchant_id, _sync, _deleted, code, updated_at, [merchant_id+_deleted], [merchant_id+_sync]",
     });
   }
 }

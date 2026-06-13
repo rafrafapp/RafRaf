@@ -317,6 +317,9 @@
     }
   },
   "transactions": {
+    "currency": "Currency",
+    "inBase": "In SYP",
+    "rateLabel": "Exchange rate",
     "types": {
       "sell": "Sale",
       "buy": "Purchase",
@@ -621,8 +624,12 @@
       "expenses": "Expense breakdown",
       "supplierSpend": "Supplier spend",
       "debtors": "Debt",
-      "lowStock": "Low stock"
-    }
+      "lowStock": "Low stock",
+      "byCurrency": "Sales by currency"
+    },
+    "grandTotalSyp": "Grand total in SYP",
+    "rateColumn": "Rate",
+    "sypColumn": "In SYP"
   },
   "settings": {
     "title": "Settings",
@@ -645,6 +652,33 @@
       "invalid": "Check the entered values.",
       "failed": "Could not save. Please try again.",
       "unauthorized": "Session expired. Please sign in again."
+    },
+    "currencies": {
+      "title": "Currencies",
+      "subtitle": "Add the currencies you deal in and update exchange rates manually. The Syrian Pound is the base currency.",
+      "add": "Add currency",
+      "currency": "Currency",
+      "other": "Other",
+      "code": "Code",
+      "nameAr": "Name (Arabic)",
+      "nameEn": "Name (English)",
+      "symbol": "Symbol",
+      "rate": "Rate vs SYP",
+      "rateHint": "How many Syrian Pounds equal one unit of this currency (e.g. 1 USD = 14500 SYP).",
+      "sypUnit": "SYP",
+      "base": "Base",
+      "baseRate": "Base currency (1)",
+      "editRate": "Edit rate",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this currency?",
+      "errors": {
+        "invalid": "Check the entered values.",
+        "exists": "This currency is already added.",
+        "failed": "Could not save. Please try again."
+      }
     },
     "logo": {
       "title": "Store logo",

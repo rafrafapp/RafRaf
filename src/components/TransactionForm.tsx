@@ -15,13 +15,19 @@ import {
   parsePositive,
   type ReturnKind,
 } from "@/lib/validation/transaction";
+import { fromBase, toBase } from "@/lib/validation/currency";
+import { useCurrencies, rateFor } from "@/lib/offline/useCurrencies";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncBadge } from "@/components/SyncBadge";
 import { ProductPicker } from "@/components/ProductPicker";
 import { PartyPicker, type Party } from "@/components/PartyPicker";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { Spinner } from "@/components/Spinner";
 import { BackButton } from "@/components/BackButton";
 import styles from "@/components/transactions.module.css";
+
+const nf = new Intl.NumberFormat("en-US");
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 type Props = {
   mode: "buy" | "return";
@@ -56,6 +62,16 @@ export function TransactionForm({
 }: Props) {
   const router = useRouter();
   const { online, syncing, sync } = useSync(merchantId);
+  const { currencies, base } = useCurrencies(merchantId);
+  const [currencyCode, setCurrencyCode] = useState<string>("");
+  const selected =
+    currencies.find((c) => c.code === currencyCode) ?? base ?? null;
+  const code = selected?.code ?? "SYP";
+  const rate = selected ? Number(selected.rate_to_base) || 1 : 1;
+  const symbol = selected?.symbol ?? "ل.س";
+  const baseSymbol = base?.symbol ?? "ل.س";
+  const isBaseCur = !selected || selected.is_base;
+
   const [product, setProduct] = useState<LocalProduct | null>(null);
   const [qty, setQty] = useState("1");
   const [price, setPrice] = useState("");
@@ -80,8 +96,20 @@ export function TransactionForm({
 
   function pick(p: LocalProduct) {
     setProduct(p);
-    setPrice(String(isBuy ? p.cost_price : p.sell_price));
+    // Catalog prices are base (SYP); show in the chosen currency.
+    const base = Number(isBuy ? p.cost_price : p.sell_price);
+    setPrice(String(round2(fromBase(base, rate))));
     setError(null);
+  }
+
+  function changeCurrency(newCode: string) {
+    const oldRate = rate;
+    const newRate = rateFor(currencies, newCode);
+    const pr = Number(price);
+    if (!Number.isNaN(pr) && pr > 0)
+      setPrice(String(round2(fromBase(toBase(pr, oldRate), newRate))));
+    setPaid("");
+    setCurrencyCode(newCode);
   }
 
   async function save() {
@@ -101,7 +129,8 @@ export function TransactionForm({
       await recordTransaction({
         merchantId,
         type: isBuy ? "buy" : kind,
-        currency,
+        currency: code,
+        exchangeRate: rate,
         product_id: product.id,
         product_name: product.name,
         qty: q,
@@ -229,7 +258,7 @@ export function TransactionForm({
                 />
               </label>
               <label className={styles.label}>
-                {priceLabel} ({currency})
+                {priceLabel} ({symbol})
                 <input
                   className={styles.input}
                   type="number"
@@ -242,6 +271,26 @@ export function TransactionForm({
                 />
               </label>
             </div>
+
+            {currencies.length > 1 && (
+              <label className={styles.label}>
+                {tx.currency}
+                <CurrencySelect
+                  currencies={currencies}
+                  value={code}
+                  onChange={changeCurrency}
+                  locale={locale}
+                  className={styles.input}
+                />
+              </label>
+            )}
+            {!isBaseCur && (Number(qty) || 0) > 0 && (Number(price) || 0) > 0 && (
+              <p className={styles.muted}>
+                {tx.inBase}: ≈{" "}
+                {nf.format((Number(qty) || 0) * (Number(price) || 0) * rate)}{" "}
+                {baseSymbol}
+              </p>
+            )}
 
             <label className={styles.label}>
               {isBuy

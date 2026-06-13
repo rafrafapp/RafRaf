@@ -7,6 +7,7 @@ import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb } from "@/lib/offline/db";
 import { useSync } from "@/lib/offline/useSync";
+import { useCurrencies, symbolFor } from "@/lib/offline/useCurrencies";
 import {
   computeReport,
   presetRange,
@@ -57,6 +58,8 @@ export function ReportsView({
   syncLabels,
 }: Props) {
   const { online, syncing, sync } = useSync(merchantId);
+  const { currencies, base } = useCurrencies(merchantId);
+  const baseSym = base?.symbol ?? currency;
   const [preset, setPreset] = useState<Preset>("today");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -101,7 +104,8 @@ export function ReportsView({
     [txns, products, customers, suppliers, range],
   );
 
-  const money = (v: number) => `${nf.format(v)} ${currency}`;
+  // All money figures are in base (SYP).
+  const money = (v: number) => `${nf.format(v)} ${baseSym}`;
   const rangeText = r.rangeText
     .replace("{from}", fmtDate(range.from))
     .replace("{to}", fmtDate(range.to));
@@ -159,6 +163,14 @@ export function ReportsView({
       summaryPairs().forEach(([k, v], i) => {
         body += `<tr>${cell(escapeHtml(k), i)}${cell(escapeHtml(v), i, true)}</tr>`;
       });
+      // Sales by currency
+      if (report.byCurrency.length) {
+        body += sec(r.sections.byCurrency);
+        report.byCurrency.forEach((x, i) => {
+          body += `<tr>${cell(`${escapeHtml(symbolFor(currencies, x.code))} ${nf.format(x.total)} (${escapeHtml(x.code)})`, i)}${cell(`${nf.format(x.totalSyp)} ${escapeHtml(baseSym)}`, i, true)}</tr>`;
+        });
+        body += `<tr>${cell(escapeHtml(r.grandTotalSyp), 1)}${cell(`${nf.format(report.sales)} ${escapeHtml(baseSym)}`, 1, true)}</tr>`;
+      }
       // Top sellers
       if (report.topSellers.length) {
         body += sec(r.sections.topSellers, 3);
@@ -227,6 +239,15 @@ export function ReportsView({
           `<tr><td>${safeHtml(x.label)}</td><td class="n">${nf.format(x.total)}</td></tr>`,
       )
       .join("");
+    const currencyRows = report.byCurrency
+      .map(
+        (x) =>
+          `<tr><td>${escapeHtml(symbolFor(currencies, x.code))} ${nf.format(x.total)} (${escapeHtml(x.code)})</td><td class="n">${nf.format(x.totalSyp)} ${escapeHtml(baseSym)}</td></tr>`,
+      )
+      .join("");
+    const showCurrencies =
+      report.byCurrency.length > 1 ||
+      (report.byCurrency[0] && report.byCurrency[0].code !== "SYP");
     const h = escapeHtml(r.reportHeading.replace("{store}", sanitizeString(storeName)));
     return (
       `<div dir="${dir}" style="font-family:'Segoe UI','Noto Sans Arabic',Arial,sans-serif;color:#111827;">` +
@@ -236,6 +257,11 @@ export function ReportsView({
       `<div style="color:#6b7280;font-size:13px;">${escapeHtml(rangeText)}</div></div></div>` +
       `<h2 style="font-size:15px;margin:14px 0 6px;color:#0e7c66;">${escapeHtml(r.title)}</h2>` +
       `<table style="width:100%;border-collapse:collapse;font-size:13px;">${sumRows}</table>` +
+      (showCurrencies
+        ? `<h2 style="font-size:15px;margin:18px 0 6px;color:#0e7c66;">${escapeHtml(r.sections.byCurrency)}</h2>` +
+          `<table style="width:100%;border-collapse:collapse;font-size:13px;">${currencyRows}` +
+          `<tr><td><strong>${escapeHtml(r.grandTotalSyp)}</strong></td><td class="n"><strong>${nf.format(report.sales)} ${escapeHtml(baseSym)}</strong></td></tr></table>`
+        : "") +
       (sellerRows
         ? `<h2 style="font-size:15px;margin:18px 0 6px;color:#0e7c66;">${escapeHtml(r.sections.topSellers)}</h2>` +
           `<table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><th>${escapeHtml(r.metric)}</th><th class="n">${escapeHtml(r.qty)}</th><th class="n">${escapeHtml(r.revenue)}</th></tr>${sellerRows}</table>`
@@ -457,6 +483,34 @@ export function ReportsView({
             {card(r.summary.debtCollected, money(report.debtCollected), "good")}
             {card(r.summary.serviceIncome, money(report.serviceIncome), "good")}
           </section>
+
+          {/* Sales by currency (only when more than just the base was used) */}
+          {(report.byCurrency.length > 1 ||
+            (report.byCurrency[0] && report.byCurrency[0].code !== "SYP")) && (
+            <section className={s.section}>
+              <h2 className={s.sectionTitle}>{r.sections.byCurrency}</h2>
+              <ul className={s.rows}>
+                {report.byCurrency.map((x) => (
+                  <li key={x.code} className={s.rowItem}>
+                    <span className={s.rowName}>
+                      {symbolFor(currencies, x.code)} {nf.format(x.total)} ({x.code})
+                    </span>
+                    <span className={s.rowMeta}>
+                      = {nf.format(x.totalSyp)} {baseSym}
+                    </span>
+                  </li>
+                ))}
+                <li className={s.rowItem}>
+                  <span className={s.rowName}>
+                    <strong>{r.grandTotalSyp}</strong>
+                  </span>
+                  <span className={s.rowValue}>
+                    <strong>{money(report.sales)}</strong>
+                  </span>
+                </li>
+              </ul>
+            </section>
+          )}
 
           {/* Trend */}
           <section className={s.section}>
