@@ -247,6 +247,72 @@
   background: #2a1414;
 }
 
+/* Saved-draft banner (new product form). */
+.draftBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: rgba(78, 222, 163, 0.1);
+  border: 1px solid var(--brand);
+  border-radius: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.draftActions {
+  display: flex;
+  gap: 0.5rem;
+}
+.draftKeep,
+.draftFresh {
+  appearance: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 0.8rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+.draftKeep {
+  border: none;
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+.draftFresh {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* Image source buttons (camera capture / upload). */
+.imgButtons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.imgBtn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.imgBtn:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.imgBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* Optional product image: picker + preview + upload progress. */
 .imageRow {
   display: flex;

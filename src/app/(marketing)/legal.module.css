@@ -1,0 +1,96 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: var(--l-text, #dae2fd);
+}
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 5vw, 3rem);
+  background: rgba(11, 19, 38, 0.85);
+  backdrop-filter: blur(10px);
+  border-block-end: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #4edea3;
+  text-decoration: none;
+}
+
+.navEnd {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.back {
+  font-size: 0.9rem;
+  color: var(--l-muted, #9fb0c9);
+  text-decoration: none;
+}
+.back:hover {
+  color: #4edea3;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: clamp(2rem, 6vw, 4rem) clamp(1.25rem, 5vw, 3rem) 4rem;
+}
+
+.title {
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  color: #fff;
+}
+
+.updated {
+  font-size: 0.85rem;
+  color: var(--l-muted, #9fb0c9);
+  margin: 0 0 1.5rem;
+}
+
+.intro {
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: var(--l-text, #dae2fd);
+  margin: 0 0 2rem;
+}
+
+.section {
+  margin-block-end: 1.75rem;
+}
+
+.h {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #4edea3;
+  margin: 0 0 0.5rem;
+}
+
+.b {
+  font-size: 1rem;
+  line-height: 1.9;
+  color: var(--l-text, #dae2fd);
+  margin: 0;
+}
+
+.footer {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--l-muted, #9fb0c9);
+  border-block-start: 1px solid rgba(255, 255, 255, 0.08);
+}

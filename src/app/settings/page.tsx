@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchant } from "@/lib/auth/merchant";
+import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SettingsForm } from "./SettingsForm";
 import { PasswordChangeForm } from "./PasswordChangeForm";
@@ -69,6 +70,22 @@ export default async function SettingsPage() {
         </div>
       )}
 
+      <p
+        style={{
+          marginBlockStart: "1.5rem",
+          display: "flex",
+          gap: "1.25rem",
+          justifyContent: "center",
+          fontSize: "0.85rem",
+        }}
+      >
+        <Link href="/privacy" style={{ color: "var(--text-muted)" }}>
+          {dict.landing.footer.privacy}
+        </Link>
+        <Link href="/terms" style={{ color: "var(--text-muted)" }}>
+          {dict.landing.footer.terms}
+        </Link>
+      </p>
     </main>
   );
 }

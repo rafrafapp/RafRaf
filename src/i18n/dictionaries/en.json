@@ -263,7 +263,20 @@
       "remove": "Remove image",
       "tooLarge": "Image is too large (2 MB max).",
       "invalidType": "That file isn't an image.",
-      "pendingBadge": "📷 Pending upload"
+      "pendingBadge": "📷 Pending upload",
+      "capture": "Take photo",
+      "upload": "Upload",
+      "cameraTitle": "Take a product photo",
+      "cameraCapture": "Capture",
+      "cameraRetake": "Retake",
+      "cameraConfirm": "Use photo",
+      "cameraError": "Could not open the camera. Check permissions.",
+      "cameraZoom": "Zoom"
+    },
+    "draft": {
+      "found": "A saved draft was found — fields restored.",
+      "keep": "Continue",
+      "fresh": "Start fresh"
     },
     "scan": "Scan barcode",
     "scanTitle": "Point the camera at the barcode",
@@ -925,6 +938,86 @@
       "apiDocs": "API Docs",
       "github": "GitHub",
       "rights": "All rights reserved to RafRaf Digital © 2024"
+    },
+    "legal": {
+      "backHome": "Back to home",
+      "updated": "Last updated: June 2026",
+      "terms": {
+        "title": "Terms of Use",
+        "intro": "By using RafRaf you agree to the following terms. Please read them carefully.",
+        "sections": [
+          {
+            "h": "Acceptance of terms",
+            "b": "Creating an account or using the service means you accept these terms and the Privacy Policy. If you do not agree, please do not use the service."
+          },
+          {
+            "h": "Usage rules",
+            "b": "Use RafRaf only to manage your own store, inventory, sales and debt ledgers. You may not use the service for any unlawful purpose, attempt to breach it, circumvent plan limits, or harm other merchants. You are responsible for the accuracy of the data you enter and for keeping your account password confidential."
+          },
+          {
+            "h": "Plan limits",
+            "b": "Features and usage limits (product count, API requests per minute, smart features) differ by your plan: Free, Basic, or Smart. We may adjust these limits with prior notice. Exceeding the limits may temporarily restrict the service."
+          },
+          {
+            "h": "Your data",
+            "b": "Your store data remains yours. We store it securely and let you export it (PDF/Excel) and back it up. You are responsible for keeping copies of your important data."
+          },
+          {
+            "h": "Disclaimer of liability",
+            "b": "The service is provided \"as is\" without warranties of any kind. We are not liable for any direct or indirect losses arising from use of the service, including loss of data, profits, or service interruptions. You alone are responsible for business decisions made based on the app's information."
+          },
+          {
+            "h": "Account termination",
+            "b": "We may suspend or terminate your account if these terms are violated. You may also delete your account at any time; your data is then removed per the Privacy Policy."
+          },
+          {
+            "h": "Changes to terms",
+            "b": "We may update these terms from time to time. Continued use of the service after an update means you accept the new terms."
+          },
+          {
+            "h": "Contact",
+            "b": "For any questions about these terms, contact us through RafRaf's support channels."
+          }
+        ]
+      },
+      "privacy": {
+        "title": "Privacy Policy",
+        "intro": "We respect your privacy. This policy explains what data we collect, and how we use and protect it.",
+        "sections": [
+          {
+            "h": "Data we collect",
+            "b": "Account data (email and name), your store data (products, sales, purchases, customers, suppliers, debts), and your Telegram chat ID if you link one. We don't collect more than what's needed to run the service."
+          },
+          {
+            "h": "How we use your data",
+            "b": "We use your data to run the app, show your reports, sync them across your devices, and send the notifications you request. We do not sell your data or share it with advertisers."
+          },
+          {
+            "h": "Sign in with Google",
+            "b": "When you choose to sign in with Google, we receive only your email and basic name to create your account. We do not access your Gmail or your Google files."
+          },
+          {
+            "h": "Storage (Supabase)",
+            "b": "Your data is stored in a Supabase (PostgreSQL) database protected by full per-store isolation (RLS) — no other merchant can see your data. We rely on encryption in transit."
+          },
+          {
+            "h": "Images (Cloudinary)",
+            "b": "Product images and your store logo — if you add them — are uploaded to Cloudinary via a secure signed upload, and stored only within a folder dedicated to your store."
+          },
+          {
+            "h": "Notifications (Telegram)",
+            "b": "If you enable Telegram notifications, we send summaries, low-stock alerts and debt reminders through a Telegram bot. You can turn this off any time in Settings. We never message your customers except at your request."
+          },
+          {
+            "h": "Data deletion",
+            "b": "You can delete your products and customers any time from within the app. To permanently delete your account and all your data, contact us and we'll remove it within a reasonable period, except what we're legally required to retain."
+          },
+          {
+            "h": "Contact",
+            "b": "For any question about your privacy or to request data deletion, contact us through RafRaf's support channels."
+          }
+        ]
+      }
     }
   },
   "devPage": {

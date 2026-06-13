@@ -8,8 +8,18 @@ import "./globals.css";
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getCurrentLocale();
   const dict = await getDictionary(locale);
+  const title = `${dict.app.name} — ${dict.app.tagline}`;
+  // Absolute origin so the og:image (app/opengraph-image) resolves for the
+  // WhatsApp/Telegram/X link-preview crawlers. Custom domain → Vercel prod URL →
+  // localhost.
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000");
   return {
-    title: `${dict.app.name} — ${dict.app.tagline}`,
+    metadataBase: new URL(siteUrl),
+    title,
     description: dict.app.promise,
     manifest: "/manifest.json",
     applicationName: dict.app.name,
@@ -18,6 +28,14 @@ export async function generateMetadata(): Promise<Metadata> {
       title: dict.app.name,
       statusBarStyle: "default",
     },
+    openGraph: {
+      title,
+      description: dict.app.promise,
+      type: "website",
+      siteName: dict.app.name,
+      locale: locale === "ar" ? "ar_SY" : "en_US",
+    },
+    twitter: { card: "summary_large_image", title, description: dict.app.promise },
   };
 }
 

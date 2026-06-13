@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Dictionary } from "@/i18n/get-dictionary";
@@ -33,6 +39,16 @@ const BarcodeScanner = dynamic(
   () => import("@/components/BarcodeScanner").then((m) => m.BarcodeScanner),
   { ssr: false },
 );
+
+// Camera capture is browser-only (getUserMedia) — load it lazily on demand.
+const CameraCapture = dynamic(
+  () => import("@/components/CameraCapture").then((m) => m.CameraCapture),
+  { ssr: false },
+);
+
+// Auto-saved draft of a new (unsaved) product, restored if the merchant leaves
+// and comes back. Only used in "create" mode; cleared on save / "start fresh".
+const DRAFT_KEY = "product_draft";
 
 type Props = {
   mode: "create" | "edit";
@@ -67,10 +83,94 @@ export function ProductForm({
   currency,
 }: Props) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [barcode, setBarcode] = useState(initial?.barcode ?? "");
   const [scanning, setScanning] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+
+  // Draft restore (create mode only).
+  const draftLoadedRef = useRef(false);
+  const [draftFound, setDraftFound] = useState(false);
+
+  // Persist the current form values to localStorage (excluding the image).
+  function saveDraft() {
+    if (mode !== "create" || !draftLoadedRef.current) return;
+    const form = formRef.current;
+    if (!form) return;
+    const fd = new FormData(form);
+    const obj: Record<string, string> = {};
+    for (const [k, v] of fd.entries()) {
+      if (typeof v === "string") obj[k] = v;
+    }
+    const hasContent = Object.values(obj).some(
+      (v) => v && v.trim() !== "" && v.trim() !== "0",
+    );
+    try {
+      if (hasContent) localStorage.setItem(DRAFT_KEY, JSON.stringify(obj));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  // On mount (create only): read any saved draft, restore the fields into the
+  // uncontrolled inputs, and show the "draft found" banner.
+  useEffect(() => {
+    if (mode !== "create") {
+      draftLoadedRef.current = true;
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const data = JSON.parse(raw) as Record<string, string>;
+        const form = formRef.current;
+        if (form) {
+          for (const [k, v] of Object.entries(data)) {
+            if (k === "barcode") {
+              setBarcode(v);
+              continue;
+            }
+            const el = form.elements.namedItem(k) as
+              | HTMLInputElement
+              | HTMLSelectElement
+              | HTMLTextAreaElement
+              | null;
+            if (el && "value" in el) el.value = v;
+          }
+        }
+        setDraftFound(true);
+      }
+    } catch {
+      /* ignore malformed draft */
+    }
+    draftLoadedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist programmatic barcode changes (generate / scan) — these don't fire
+  // the form's onInput.
+  useEffect(() => {
+    saveDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barcode]);
+
+  function discardDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
+    setDraftFound(false);
+    formRef.current?.reset();
+    setBarcode("");
+    setImageFile(null);
+    setPreview(null);
+    setImgError(null);
+  }
 
   // Optional image (offline-first): picked locally, uploaded in the foreground when
   // online (with a % bar) or stashed for upload on sync when offline.
@@ -203,6 +303,11 @@ export function ProductForm({
           data: parsed.data,
         });
         await applyImage(id);
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {
+          /* ignore */
+        }
         void syncAll(merchantId).catch(() => {});
         router.push("/products");
       } catch {
@@ -211,12 +316,42 @@ export function ProductForm({
     });
   }
 
+  const draft = products.draft as Record<string, string>;
+
   return (
-    <form onSubmit={onSubmit} className={styles.form}>
+    <form
+      ref={formRef}
+      onSubmit={onSubmit}
+      onInput={saveDraft}
+      onChange={saveDraft}
+      className={styles.form}
+    >
       {error && (
         <p className={styles.error} role="alert">
           {error}
         </p>
+      )}
+
+      {draftFound && (
+        <div className={styles.draftBanner}>
+          <span>{draft.found}</span>
+          <div className={styles.draftActions}>
+            <button
+              type="button"
+              className={styles.draftKeep}
+              onClick={() => setDraftFound(false)}
+            >
+              {draft.keep}
+            </button>
+            <button
+              type="button"
+              className={styles.draftFresh}
+              onClick={discardDraft}
+            >
+              {draft.fresh}
+            </button>
+          </div>
+        </div>
       )}
 
       <label className={styles.label}>
@@ -398,11 +533,34 @@ export function ProductForm({
             </span>
           )}
           <div className={styles.imgActions}>
+            <div className={styles.imgButtons}>
+              <button
+                type="button"
+                className={styles.imgBtn}
+                disabled={pending}
+                onClick={() => setCameraOpen(true)}
+              >
+                📷 {img.capture}
+              </button>
+              <button
+                type="button"
+                className={styles.imgBtn}
+                disabled={pending}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                ⬆️ {img.upload}
+              </button>
+            </div>
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
+              hidden
               disabled={pending}
-              onChange={(e) => onPickImage(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                onPickImage(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
             />
             {preview && !removeExisting && (
               <button
@@ -468,6 +626,25 @@ export function ProductForm({
             error: products.scanError,
             close: products.scanClose,
             upload: products.scanUpload,
+          }}
+        />
+      )}
+
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={(file) => {
+            onPickImage(file);
+            setCameraOpen(false);
+          }}
+          onClose={() => setCameraOpen(false)}
+          labels={{
+            title: img.cameraTitle,
+            capture: img.cameraCapture,
+            retake: img.cameraRetake,
+            confirm: img.cameraConfirm,
+            close: products.scanClose,
+            error: img.cameraError,
+            zoom: img.cameraZoom,
           }}
         />
       )}

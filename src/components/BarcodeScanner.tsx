@@ -18,8 +18,12 @@ type Props = {
     error: string;
     close: string;
     upload: string;
+    zoomIn?: string;
+    zoomOut?: string;
   };
 };
+
+type ZoomRange = { min: number; max: number; step: number };
 
 // 1D retail symbologies. QuaggaJS is a 1D engine — QR codes are covered by the
 // image-upload fallback (ZXing) below, not the live camera.
@@ -73,6 +77,47 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
   const [error, setError] = useState(false);
   const [uploadFailed, setUploadFailed] = useState(false);
 
+  // Camera zoom: prefer the hardware zoom API (changes the real stream → better
+  // reads); fall back to a CSS transform (visual only) when unsupported.
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const videoElRef = useRef<HTMLVideoElement | null>(null);
+  const hwZoomRef = useRef(false);
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
+  const [zoom, setZoom] = useState(1.5);
+  const [zoomRange, setZoomRange] = useState<ZoomRange | null>(null);
+
+  function applyZoom(z: number) {
+    const r = zoomRange;
+    if (!r) return;
+    const clamped = Math.min(Math.max(z, r.min), r.max);
+    setZoom(clamped);
+    const track = trackRef.current;
+    if (hwZoomRef.current && track) {
+      track
+        .applyConstraints({
+          advanced: [{ zoom: clamped }],
+        } as unknown as MediaTrackConstraints)
+        .catch(() => {});
+    } else if (videoElRef.current) {
+      videoElRef.current.style.transform = `scale(${clamped})`;
+    }
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (e.touches.length !== 2) return;
+    const a = e.touches[0];
+    const b = e.touches[1];
+    const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    if (!pinchRef.current) {
+      pinchRef.current = { dist, zoom };
+      return;
+    }
+    applyZoom(pinchRef.current.zoom * (dist / pinchRef.current.dist));
+  }
+  function onTouchEnd() {
+    pinchRef.current = null;
+  }
+
   // Fire once: stop the camera, beep/vibrate, and hand the code up. The parent
   // fills the field and closes the scanner (unmounts us → cleanup runs).
   const finish = useCallback((code: string) => {
@@ -111,6 +156,41 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
       locate: true,
     };
 
+    // Quagga injects its <video> asynchronously; poll briefly for the stream
+    // track, then enable zoom (hardware where available, 1.5× to start).
+    const setupZoom = (attempt: number) => {
+      if (doneRef.current) return;
+      const video = target.querySelector("video") as HTMLVideoElement | null;
+      const stream = (video?.srcObject ?? null) as MediaStream | null;
+      const track = stream?.getVideoTracks?.()[0] ?? null;
+      if (!track) {
+        if (attempt < 20) setTimeout(() => setupZoom(attempt + 1), 150);
+        return;
+      }
+      videoElRef.current = video;
+      trackRef.current = track;
+      const caps = track.getCapabilities?.() as
+        | (MediaTrackCapabilities & { zoom?: ZoomRange })
+        | undefined;
+      if (caps?.zoom && caps.zoom.max > caps.zoom.min) {
+        hwZoomRef.current = true;
+        const step = caps.zoom.step || 0.1;
+        const init = Math.min(Math.max(1.5, caps.zoom.min), caps.zoom.max);
+        setZoomRange({ min: caps.zoom.min, max: caps.zoom.max, step });
+        setZoom(init);
+        track
+          .applyConstraints({
+            advanced: [{ zoom: init }],
+          } as unknown as MediaTrackConstraints)
+          .catch(() => {});
+      } else {
+        hwZoomRef.current = false;
+        setZoomRange({ min: 1, max: 4, step: 0.1 });
+        setZoom(1.5);
+        if (video) video.style.transform = "scale(1.5)";
+      }
+    };
+
     Quagga.init(config, (err) => {
       if (err) {
         setError(true);
@@ -118,6 +198,7 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
       }
       if (doneRef.current) return; // unmounted before init resolved
       Quagga.start();
+      setupZoom(0);
     });
     Quagga.onDetected(onResult);
 
@@ -179,9 +260,51 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
             {labels.error}
           </p>
         ) : (
-          <div className={styles.viewport} ref={viewportRef}>
+          <div
+            className={styles.viewport}
+            ref={viewportRef}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             <div className={styles.frame} aria-hidden="true" />
             <div className={styles.laser} aria-hidden="true" />
+            {zoomRange && (
+              <div className={styles.zoomControls}>
+                <button
+                  type="button"
+                  className={styles.zoomBtn}
+                  aria-label={labels.zoomOut ?? "−"}
+                  onClick={() =>
+                    applyZoom(
+                      zoom -
+                        Math.max(
+                          (zoomRange.max - zoomRange.min) / 10,
+                          zoomRange.step,
+                        ),
+                    )
+                  }
+                >
+                  −
+                </button>
+                <span className={styles.zoomLevel}>{zoom.toFixed(1)}×</span>
+                <button
+                  type="button"
+                  className={styles.zoomBtn}
+                  aria-label={labels.zoomIn ?? "+"}
+                  onClick={() =>
+                    applyZoom(
+                      zoom +
+                        Math.max(
+                          (zoomRange.max - zoomRange.min) / 10,
+                          zoomRange.step,
+                        ),
+                    )
+                  }
+                >
+                  +
+                </button>
+              </div>
+            )}
           </div>
         )}
         <p className={styles.hint}>{labels.hint}</p>

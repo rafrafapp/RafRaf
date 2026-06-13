@@ -352,9 +352,8 @@ export default async function LandingPage() {
             </div>
             <div className={s.footerCol}>
               <h5 className={s.footerColTitle}>{t.footer.legal}</h5>
-              <a className={s.footerLink} href="#">{t.footer.privacy}</a>
-              <a className={s.footerLink} href="#">{t.footer.terms}</a>
-              <a className={s.footerLink} href="#">{t.footer.data}</a>
+              <Link className={s.footerLink} href="/privacy">{t.footer.privacy}</Link>
+              <Link className={s.footerLink} href="/terms">{t.footer.terms}</Link>
             </div>
           </div>
         </div>
