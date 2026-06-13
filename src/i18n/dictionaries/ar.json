@@ -631,7 +631,16 @@
     },
     "grandTotalSyp": "الإجمالي بالليرة السورية",
     "rateColumn": "سعر الصرف",
-    "sypColumn": "بالليرة"
+    "sypColumn": "بالليرة",
+    "chart": {
+      "legendSales": "مبيعات",
+      "legendAvg": "المتوسط اليومي",
+      "highest": "أعلى يوم",
+      "average": "متوسط يومي",
+      "total": "إجمالي الفترة",
+      "invoices": "فاتورة",
+      "noSales": "لا توجد مبيعات في هذه الفترة"
+    }
   },
   "settings": {
     "title": "الإعدادات",

@@ -111,6 +111,22 @@ export function ReportsView({
     .replace("{to}", fmtDate(range.to));
 
   const trendMax = Math.max(1, ...report.trend.map((d) => d.total));
+  // Chart stats: best day, daily average, whether there's any data at all.
+  const trendTotal = report.trend.reduce((sum, d) => sum + d.total, 0);
+  const trendAvg = report.trend.length
+    ? trendTotal / report.trend.length
+    : 0;
+  const bestDay = report.trend.reduce<{ day: string; total: number } | null>(
+    (best, d) => (best && best.total >= d.total ? best : { day: d.day, total: d.total }),
+    null,
+  );
+  const trendHasData = report.trend.some((d) => d.total > 0);
+  // Compact money for the value-on-bar + Y axis (e.g. 1.5M).
+  const cf = new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+  const ddmm = (day: string) => `${day.slice(8)}/${day.slice(5, 7)}`;
 
   // ---- Exports -------------------------------------------------------------
   function summaryPairs(): [string, string][] {
@@ -515,28 +531,112 @@ export function ReportsView({
           {/* Trend */}
           <section className={s.section}>
             <h2 className={s.sectionTitle}>{r.sections.trend}</h2>
-            {report.trend.length === 0 ? (
-              <p className={t.count}>{r.empty}</p>
-            ) : (
-              <div className={s.chart}>
-                {report.trend.map((d) => {
-                  const isMax = d.total > 0 && d.total === trendMax;
-                  return (
-                    <div key={d.day} className={s.col}>
-                      <span className={s.colTrack}>
-                        <span
-                          className={`${s.colBar} ${isMax ? s.colBarMax : ""}`}
-                          style={{ height: `${Math.max(2, (d.total / trendMax) * 100)}%` }}
-                          title={`${d.day} · ${money(d.total)}`}
-                        />
-                      </span>
-                      {report.trend.length <= 16 && (
-                        <span className={s.colDay}>{d.day.slice(8)}</span>
-                      )}
-                    </div>
-                  );
-                })}
+            {!trendHasData ? (
+              <div className={s.chartEmpty}>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="40"
+                  height="40"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 3v18h18" />
+                  <path d="M7 15l3-3 3 2 4-5" />
+                </svg>
+                <p>{r.chart.noSales}</p>
               </div>
+            ) : (
+              <>
+                {/* Legend */}
+                <div className={s.legend}>
+                  <span className={s.legendItem}>
+                    <span className={`${s.legendDot} ${s.legendSales}`} />
+                    {r.chart.legendSales}
+                  </span>
+                  {trendAvg > 0 && (
+                    <span className={s.legendItem}>
+                      <span className={`${s.legendDot} ${s.legendAvg}`} />
+                      {r.chart.legendAvg}
+                    </span>
+                  )}
+                </div>
+
+                <div className={s.chartWrap}>
+                  {/* Y axis */}
+                  <div className={s.yAxis}>
+                    <span>{cf.format(trendMax)}</span>
+                    <span>{cf.format(trendMax / 2)}</span>
+                    <span>0</span>
+                  </div>
+                  <div className={s.chart}>
+                    {/* Average reference line */}
+                    {trendAvg > 0 && (
+                      <div
+                        className={s.avgLine}
+                        style={{ bottom: `${(trendAvg / trendMax) * 100}%` }}
+                        title={`${r.chart.average}: ${money(trendAvg)}`}
+                      />
+                    )}
+                    {report.trend.map((d) => {
+                      const isMax = d.total > 0 && d.total === trendMax;
+                      return (
+                        <div key={d.day} className={s.col}>
+                          {d.total > 0 && (
+                            <span className={s.colVal}>{cf.format(d.total)}</span>
+                          )}
+                          <span
+                            className={s.colTrack}
+                            tabIndex={0}
+                            role="img"
+                            aria-label={`${ddmm(d.day)} · ${money(d.total)} · ${nf.format(d.count)} ${r.chart.invoices}`}
+                          >
+                            <span
+                              className={`${s.colBar} ${isMax ? s.colBarMax : ""}`}
+                              style={{
+                                height: `${Math.max(2, (d.total / trendMax) * 100)}%`,
+                              }}
+                            />
+                            <span className={s.tooltip}>
+                              <strong>{ddmm(d.day)}</strong>
+                              <span>{money(d.total)}</span>
+                              <span>
+                                {nf.format(d.count)} {r.chart.invoices}
+                              </span>
+                            </span>
+                          </span>
+                          {report.trend.length <= 16 && (
+                            <span className={s.colDay}>{d.day.slice(8)}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <div className={s.chartSummary}>
+                  <div className={s.chartStat}>
+                    <span className={s.chartStatLabel}>{r.chart.highest}</span>
+                    <span className={s.chartStatValue}>
+                      {bestDay && bestDay.total > 0
+                        ? `${ddmm(bestDay.day)} · ${money(bestDay.total)}`
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className={s.chartStat}>
+                    <span className={s.chartStatLabel}>{r.chart.average}</span>
+                    <span className={s.chartStatValue}>{money(trendAvg)}</span>
+                  </div>
+                  <div className={s.chartStat}>
+                    <span className={s.chartStatLabel}>{r.chart.total}</span>
+                    <span className={s.chartStatValue}>{money(trendTotal)}</span>
+                  </div>
+                </div>
+              </>
             )}
           </section>
 

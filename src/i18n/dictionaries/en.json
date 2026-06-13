@@ -631,7 +631,16 @@
     },
     "grandTotalSyp": "Grand total in SYP",
     "rateColumn": "Rate",
-    "sypColumn": "In SYP"
+    "sypColumn": "In SYP",
+    "chart": {
+      "legendSales": "Sales",
+      "legendAvg": "Daily average",
+      "highest": "Best day",
+      "average": "Daily average",
+      "total": "Period total",
+      "invoices": "invoices",
+      "noSales": "No sales in this period"
+    }
   },
   "settings": {
     "title": "Settings",

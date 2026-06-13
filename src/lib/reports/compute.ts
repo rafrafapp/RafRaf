@@ -15,7 +15,8 @@ export type SellerStat = {
   revenue: number;
 };
 export type CategoryStat = { key: string; label: string; total: number };
-export type DayStat = { day: string; total: number }; // day = YYYY-MM-DD (local)
+// day = YYYY-MM-DD (local); total in base SYP; count = distinct sale invoices.
+export type DayStat = { day: string; total: number; count: number };
 export type PartyStat = { id: string; name: string; amount: number };
 // Per-currency sales: original amount in that currency + its SYP-equivalent.
 export type CurrencyStat = { code: string; total: number; totalSyp: number };
@@ -268,11 +269,14 @@ export function computeReport(opts: {
 
   // Sales trend by day. For windows ≤ 62 days, emit every day (so gaps show as 0);
   // otherwise only days with sales (keeps the chart readable).
-  const byDay = new Map<string, number>();
+  const byDay = new Map<string, { total: number; invoices: Set<string> }>();
   for (const t of inRange) {
     if (t.type !== "sell") continue;
     const k = dayKey(new Date(t.created_at).getTime());
-    byDay.set(k, (byDay.get(k) ?? 0) + sypOf(t));
+    const e = byDay.get(k) ?? { total: 0, invoices: new Set<string>() };
+    e.total += sypOf(t);
+    e.invoices.add(t.group_uuid ?? t.client_uuid);
+    byDay.set(k, e);
   }
   const spanDays = Math.ceil((range.to - range.from) / DAY_MS);
   let trend: DayStat[];
@@ -282,11 +286,12 @@ export function computeReport(opts: {
     start.setHours(0, 0, 0, 0);
     for (let ms = start.getTime(); ms < range.to; ms += DAY_MS) {
       const k = dayKey(ms);
-      trend.push({ day: k, total: byDay.get(k) ?? 0 });
+      const e = byDay.get(k);
+      trend.push({ day: k, total: e?.total ?? 0, count: e?.invoices.size ?? 0 });
     }
   } else {
     trend = [...byDay.entries()]
-      .map(([day, total]) => ({ day, total }))
+      .map(([day, e]) => ({ day, total: e.total, count: e.invoices.size }))
       .sort((a, b) => a.day.localeCompare(b.day));
   }
 

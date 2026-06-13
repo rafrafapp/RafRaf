@@ -49,3 +49,16 @@ body {
 a {
   color: var(--brand);
 }
+
+/* Hide the number-input spinners (Chrome/Safari + Firefox). Combined with the
+   global wheel guard (NumberInputGuard), this stops scrolling the page from
+   accidentally changing a focused number field's value. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

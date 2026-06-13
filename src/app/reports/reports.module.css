@@ -81,6 +81,8 @@
 
 /* Sales-trend column chart — pure CSS. */
 .chart {
+  position: relative;
+  flex: 1;
   display: flex;
   align-items: stretch;
   gap: 0.3rem;
@@ -100,32 +102,168 @@
   gap: 0.35rem;
 }
 .colTrack {
+  position: relative;
   flex: 1;
   inline-size: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
 }
+/* Sales bars are orange (see legend). */
 .colBar {
   inline-size: 100%;
   max-inline-size: 2.4rem;
   min-block-size: 3px;
   border-radius: 0.35rem 0.35rem 0 0;
-  background: linear-gradient(to top, var(--primary-container), var(--primary));
+  background: linear-gradient(to top, #d98a1f, var(--secondary));
   transition: filter 0.15s;
 }
 .colBar:hover {
   filter: brightness(1.18);
 }
-/* the peak day pops in amber */
+/* the peak day pops brighter */
 .colBarMax {
-  background: linear-gradient(to top, #d98a1f, var(--secondary));
+  background: linear-gradient(to top, var(--secondary), #ffd29a);
 }
 .colDay {
   font-size: 0.62rem;
   color: var(--text-muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+/* value-on-top of each bar */
+.colVal {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* chart + Y axis layout */
+.chartWrap {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+.yAxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-block: 0.85rem 1.4rem;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-align: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* average reference line (green, dashed) */
+.avgLine {
+  position: absolute;
+  inset-inline: 0.75rem;
+  border-top: 2px dashed var(--primary);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* hover/tap tooltip on each bar */
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.3rem;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--sc-highest);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text);
+  white-space: nowrap;
+  z-index: 5;
+  box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.6);
+}
+.colTrack:hover .tooltip,
+.colTrack:focus-within .tooltip {
+  display: flex;
+}
+
+/* legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-block-end: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.legendDot {
+  inline-size: 0.85rem;
+  block-size: 0.85rem;
+  border-radius: 3px;
+}
+.legendSales {
+  background: var(--secondary);
+}
+.legendAvg {
+  block-size: 0;
+  inline-size: 1.1rem;
+  border-top: 2px dashed var(--primary);
+  border-radius: 0;
+}
+
+/* below-chart summary */
+.chartSummary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-block-start: 0.85rem;
+}
+.chartStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--sc-low);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+}
+.chartStatLabel {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.chartStatValue {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 32rem) {
+  .chartSummary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* empty state */
+.chartEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2.5rem 1rem;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 /* Ranked rows (sellers, expenses, suppliers, debtors, low stock). */

@@ -3,6 +3,7 @@ import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { localeDirection } from "@/i18n/config";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { NumberInputGuard } from "@/components/NumberInputGuard";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -59,6 +60,7 @@ export default async function RootLayout({
       <body>
         {children}
         <ServiceWorkerRegister />
+        <NumberInputGuard />
       </body>
     </html>
   );
