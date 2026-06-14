@@ -1017,7 +1017,7 @@
 @media (max-width: 480px) {
   .main {
     padding-inline: 0.9rem;
-    padding-block: 1rem 2.5rem;
+    padding-block: 1rem 6rem; /* clear the fixed bottom nav */
     gap: 1rem;
   }
   .title {

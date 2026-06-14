@@ -372,7 +372,7 @@
 @media (max-width: 480px) {
   .main {
     padding-inline: 0.9rem;
-    padding-block: 0.9rem;
+    padding-block: 0.9rem 6rem; /* clear the fixed bottom nav */
   }
   .topbar {
     max-inline-size: 100%;

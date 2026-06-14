@@ -4,7 +4,7 @@
   flex-direction: column;
   gap: 1rem;
   padding-inline: clamp(1rem, 5vw, 3rem);
-  padding-block: 1.5rem;
+  padding-block: 1.5rem 6rem; /* clear the fixed bottom nav */
 }
 
 .header {
