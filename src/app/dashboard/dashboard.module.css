@@ -47,10 +47,15 @@
   text-decoration: none;
   color: inherit;
 }
+.avatarWrap {
+  position: relative;
+  flex: 0 0 auto;
+  inline-size: 40px;
+  block-size: 40px;
+}
 .avatar {
   inline-size: 40px;
   block-size: 40px;
-  flex: 0 0 auto;
   border-radius: 999px;
   background: var(--navy);
   color: #fff;
@@ -65,6 +70,26 @@
   inline-size: 100%;
   block-size: 100%;
   object-fit: cover;
+}
+/* sync state dot, bottom-right corner of the avatar */
+.statusDot {
+  position: absolute;
+  inset-block-end: -1px;
+  right: -1px;
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--surface);
+  box-sizing: border-box;
+}
+.dotSynced {
+  background: #16a34a;
+}
+.dotPending {
+  background: #f59e0b;
+}
+.dotOffline {
+  background: #dc2626;
 }
 .brandText {
   display: flex;

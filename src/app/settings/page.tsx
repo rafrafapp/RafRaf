@@ -4,6 +4,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchant } from "@/lib/auth/merchant";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { SignOutButton } from "@/components/SignOutButton";
 import { SettingsForm } from "./SettingsForm";
 import { PasswordChangeForm } from "./PasswordChangeForm";
 import { LogoUpload } from "./LogoUpload";
@@ -96,6 +97,16 @@ export default async function SettingsPage() {
           {dict.landing.footer.terms}
         </Link>
       </p>
+
+      <div
+        style={{
+          marginBlockStart: "1rem",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <SignOutButton label={dict.dashboard.signOut} className={styles.delete} />
+      </div>
     </main>
   );
 }

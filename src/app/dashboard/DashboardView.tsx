@@ -10,9 +10,6 @@ import { computeReport, presetRange } from "@/lib/reports/compute";
 import { useSync } from "@/lib/offline/useSync";
 import { useCurrencies } from "@/lib/offline/useCurrencies";
 import { safeDisplay } from "@/lib/validation/sanitize";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SyncStatus } from "@/components/SyncStatus";
-import { SignOutButton } from "@/components/SignOutButton";
 import {
   IconBox,
   IconStore,
@@ -83,10 +80,9 @@ export function DashboardView({
   logoUrl,
   locale,
   dashboard: d,
-  common,
   sync,
 }: Props) {
-  const { online, syncing, sync: doSync } = useSync(merchantId);
+  const { online, syncing } = useSync(merchantId);
   const { base } = useCurrencies(merchantId);
   const baseSym = base?.symbol ?? currency;
 
@@ -207,18 +203,38 @@ export function DashboardView({
   };
   const initials = storeName.trim().slice(0, 2);
 
+  // Sync state shown as a small dot on the avatar (no text badge):
+  // red = offline, orange = syncing / pending, green = synced & online.
+  const dotClass = !online
+    ? styles.dotOffline
+    : syncing || pending > 0
+      ? styles.dotPending
+      : styles.dotSynced;
+  const dotLabel = !online
+    ? sync.offline
+    : syncing || pending > 0
+      ? sync.syncing
+      : sync.synced;
+
   return (
     <div className={styles.page}>
       {/* Top app bar */}
       <header className={styles.topbar}>
         <Link href="/settings" className={styles.brand} aria-label={d.settings}>
-          <span className={styles.avatar}>
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="" className={styles.avatarImg} />
-            ) : (
-              <span>{safeDisplay(initials)}</span>
-            )}
+          <span className={styles.avatarWrap}>
+            <span className={styles.avatar}>
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="" className={styles.avatarImg} />
+              ) : (
+                <span>{safeDisplay(initials)}</span>
+              )}
+            </span>
+            <span
+              className={`${styles.statusDot} ${dotClass}`}
+              role="status"
+              aria-label={dotLabel}
+            />
           </span>
           <span className={styles.brandText}>
             <span className={styles.storeName}>{safeDisplay(storeName)}</span>
@@ -226,31 +242,6 @@ export function DashboardView({
           </span>
         </Link>
         <div className={styles.topActions}>
-          <button
-            type="button"
-            className={styles.syncBtn}
-            onClick={() => void doSync()}
-            disabled={!online || syncing}
-            title={d.manualSync}
-            aria-label={d.manualSync}
-          >
-            <SyncStatus
-              online={online}
-              syncing={syncing}
-              pending={pending}
-              labels={{
-                online: sync.online,
-                offline: sync.offline,
-                syncing: sync.syncing,
-                synced: sync.synced,
-                pending: sync.pending,
-              }}
-            />
-          </button>
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
           <Link
             href="/notifications"
             className={styles.bellBtn}
@@ -397,8 +388,6 @@ export function DashboardView({
           </div>
         </section>
 
-        {/* Logout (kept reachable from the dashboard) */}
-        <SignOutButton label={d.signOut} className={styles.signOut} />
       </main>
 
       {/* Fixed bottom nav — always visible */}
