@@ -77,30 +77,27 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
   const [error, setError] = useState(false);
   const [uploadFailed, setUploadFailed] = useState(false);
 
-  // Camera zoom: prefer the hardware zoom API (changes the real stream → better
-  // reads); fall back to a CSS transform (visual only) when unsupported.
+  // Camera zoom — HARDWARE ONLY. A CSS transform would only scale the preview,
+  // not the frames Quagga actually decodes, so it makes the barcode effectively
+  // smaller/cropped in the decoded image and breaks reading. We therefore zoom
+  // the real stream via applyConstraints, and only expose the control when the
+  // camera reports a real `zoom` capability.
   const trackRef = useRef<MediaStreamTrack | null>(null);
-  const videoElRef = useRef<HTMLVideoElement | null>(null);
-  const hwZoomRef = useRef(false);
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
-  const [zoom, setZoom] = useState(1.5);
+  const [zoom, setZoom] = useState(1);
   const [zoomRange, setZoomRange] = useState<ZoomRange | null>(null);
 
   function applyZoom(z: number) {
     const r = zoomRange;
-    if (!r) return;
+    const track = trackRef.current;
+    if (!r || !track) return;
     const clamped = Math.min(Math.max(z, r.min), r.max);
     setZoom(clamped);
-    const track = trackRef.current;
-    if (hwZoomRef.current && track) {
-      track
-        .applyConstraints({
-          advanced: [{ zoom: clamped }],
-        } as unknown as MediaTrackConstraints)
-        .catch(() => {});
-    } else if (videoElRef.current) {
-      videoElRef.current.style.transform = `scale(${clamped})`;
-    }
+    track
+      .applyConstraints({
+        advanced: [{ zoom: clamped }],
+      } as unknown as MediaTrackConstraints)
+      .catch(() => {});
   }
 
   function onTouchMove(e: React.TouchEvent) {
@@ -147,7 +144,12 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
       inputStream: {
         type: "LiveStream",
         target,
-        constraints: { facingMode: "environment" },
+        // A decent capture resolution so 1D bars have enough pixels to decode.
+        constraints: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
       },
       locator: { patchSize: "medium", halfSample: true },
       numOfWorkers: 0, // main thread — no blob-worker lifecycle to clean up
@@ -167,13 +169,14 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
         if (attempt < 20) setTimeout(() => setupZoom(attempt + 1), 150);
         return;
       }
-      videoElRef.current = video;
       trackRef.current = track;
       const caps = track.getCapabilities?.() as
         | (MediaTrackCapabilities & { zoom?: ZoomRange })
         | undefined;
+      // Only offer zoom when the camera supports it for real. A modest 1.5×
+      // start helps read small barcodes; if unsupported we leave the stream at
+      // 1× and hide the control (no CSS fake-zoom, which would break decoding).
       if (caps?.zoom && caps.zoom.max > caps.zoom.min) {
-        hwZoomRef.current = true;
         const step = caps.zoom.step || 0.1;
         const init = Math.min(Math.max(1.5, caps.zoom.min), caps.zoom.max);
         setZoomRange({ min: caps.zoom.min, max: caps.zoom.max, step });
@@ -183,11 +186,6 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
             advanced: [{ zoom: init }],
           } as unknown as MediaTrackConstraints)
           .catch(() => {});
-      } else {
-        hwZoomRef.current = false;
-        setZoomRange({ min: 1, max: 4, step: 0.1 });
-        setZoom(1.5);
-        if (video) video.style.transform = "scale(1.5)";
       }
     };
 
