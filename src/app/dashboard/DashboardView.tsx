@@ -8,14 +8,13 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb, type TxType, type PaymentMethod } from "@/lib/offline/db";
 import { computeReport, presetRange } from "@/lib/reports/compute";
 import { useSync } from "@/lib/offline/useSync";
+import { useCurrencies } from "@/lib/offline/useCurrencies";
 import { safeDisplay } from "@/lib/validation/sanitize";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SyncStatus } from "@/components/SyncStatus";
 import { SignOutButton } from "@/components/SignOutButton";
 import {
-  IconTrendingUp,
   IconBox,
-  IconWallet,
   IconStore,
   IconUsers,
   IconTruck,
@@ -24,62 +23,46 @@ import {
   IconBanknote,
   IconHistory,
   IconChart,
-  IconPhone,
-  IconWarning,
-  IconAlert,
-  IconPlus,
+  IconBell,
   IconHome,
   IconSettings,
-  ActivityIcon,
 } from "./icons";
 import styles from "./dashboard.module.css";
 
+// Western digits everywhere (1,2,3 — never ١,٢,٣).
 const nf = new Intl.NumberFormat("en-US");
 
 type IconComp = React.ComponentType<{ size?: number; className?: string }>;
-type ActionLabel =
-  | "manageProducts"
+type TileKey =
+  | "products"
   | "customers"
   | "suppliers"
+  | "reports"
   | "buy"
   | "returns"
   | "expenses"
-  | "transactions"
-  | "reports"
-  | "mobileCredit"
-  | "shamCash";
-type ColorClass = "cPrimary" | "cSecondary" | "cTertiary" | "cError";
+  | "transactions";
 
-// The action grid (the user-specified routes + the two new service cards).
-const ACTIONS: { href: string; label: ActionLabel; Icon: IconComp; color: ColorClass }[] = [
-  { href: "/products", label: "manageProducts", Icon: IconBox, color: "cPrimary" },
-  { href: "/customers", label: "customers", Icon: IconUsers, color: "cSecondary" },
-  { href: "/suppliers", label: "suppliers", Icon: IconTruck, color: "cTertiary" },
-  { href: "/buy", label: "buy", Icon: IconCart, color: "cPrimary" },
-  { href: "/returns", label: "returns", Icon: IconReturn, color: "cError" },
-  { href: "/expenses", label: "expenses", Icon: IconBanknote, color: "cError" },
-  { href: "/transactions", label: "transactions", Icon: IconHistory, color: "cPrimary" },
-  { href: "/reports", label: "reports", Icon: IconChart, color: "cSecondary" },
-  { href: "/mobile-credit", label: "mobileCredit", Icon: IconPhone, color: "cPrimary" },
+// The 4×2 quick-action grid (exactly the design's eight tiles).
+const TILES: { href: string; key: TileKey; Icon: IconComp }[] = [
+  { href: "/products", key: "products", Icon: IconBox },
+  { href: "/customers", key: "customers", Icon: IconUsers },
+  { href: "/suppliers", key: "suppliers", Icon: IconTruck },
+  { href: "/reports", key: "reports", Icon: IconChart },
+  { href: "/buy", key: "buy", Icon: IconCart },
+  { href: "/returns", key: "returns", Icon: IconReturn },
+  { href: "/expenses", key: "expenses", Icon: IconBanknote },
+  { href: "/transactions", key: "transactions", Icon: IconHistory },
 ];
 
-// Per-color helpers so each action card gets a distinct accent + tinted icon
-// background (not just a different SVG colour) — visual hierarchy across cards.
-const ICON_BG: Record<ColorClass, string> = {
-  cPrimary: "iconBgPrimary",
-  cSecondary: "iconBgSecondary",
-  cTertiary: "iconBgTertiary",
-  cError: "iconBgError",
-};
-const ACCENT: Record<ColorClass, string> = {
-  cPrimary: "accentPrimary",
-  cSecondary: "accentSecondary",
-  cTertiary: "accentTertiary",
-  cError: "accentError",
-};
-
-// Income (+, green) vs outflow (−, red) for the recent-activity amounts.
-const INCOME: TxType[] = ["sell", "debt_payment", "return_supplier", "mobile_credit", "sham_cash"];
+// Money-in (+) vs money-out (−) for the recent-activity amount colour.
+const INCOME: TxType[] = [
+  "sell",
+  "debt_payment",
+  "return_supplier",
+  "mobile_credit",
+  "sham_cash",
+];
 
 type Props = {
   merchantId: string;
@@ -98,19 +81,16 @@ export function DashboardView({
   currency,
   storeName,
   logoUrl,
-  offersMobileCredit,
   locale,
   dashboard: d,
   common,
   sync,
 }: Props) {
-  // Hide the mobile-credit (وحدات) action for merchants who don't offer it.
-  const actions = offersMobileCredit
-    ? ACTIONS
-    : ACTIONS.filter((a) => a.label !== "mobileCredit");
   const { online, syncing, sync: doSync } = useSync(merchantId);
+  const { base } = useCurrencies(merchantId);
+  const baseSym = base?.symbol ?? currency;
 
-  // Live, offline-first reads straight from IndexedDB (re-render on any sync/write).
+  // Live, offline-first reads straight from IndexedDB.
   const products = useLiveQuery(
     () => getDb().products.where("[merchant_id+_deleted]").equals([merchantId, 0]).toArray(),
     [merchantId],
@@ -139,7 +119,6 @@ export function DashboardView({
       return p + c + s + t;
     }, [merchantId]) ?? 0;
 
-  // Today's figures (sales / receivable / low-stock) from the shared report module.
   const report = useMemo(
     () =>
       computeReport({
@@ -152,9 +131,30 @@ export function DashboardView({
     [txns, products, customers, suppliers],
   );
   const productCount = products?.length ?? 0;
-  const lowStock = report.lowStock.slice(0, 5);
 
-  // Recent activity: most recent invoices, collapsing multi-line carts (group_uuid).
+  const money = (n: number) => `${nf.format(Math.round(n))} ${baseSym}`;
+
+  // Alerts = low-stock items + outstanding debtors (matches the design's mix of
+  // "out of stock" + "late invoice"). Full list lives on /notifications.
+  const alerts = useMemo(() => {
+    const stock = report.lowStock.map((p) => ({
+      key: `s-${p.id}`,
+      name: p.name,
+      meta: p.stock <= 0 ? d.notifications.outOfStock : d.notifications.lowStockItem,
+      href: `/products/${p.id}/edit`,
+    }));
+    const debts = report.topDebtors.map((c) => ({
+      key: `d-${c.id}`,
+      name: c.name,
+      meta: d.notifications.lateInvoice,
+      href: `/customers/${c.id}`,
+    }));
+    return [...stock, ...debts];
+  }, [report.lowStock, report.topDebtors, d.notifications]);
+
+  const debtors = report.topDebtors.slice(0, 3);
+
+  // Recent activity: most recent invoices, collapsing multi-line carts.
   const recent = useMemo(() => {
     const rows = [...(txns ?? [])].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -178,14 +178,24 @@ export function DashboardView({
         });
         order.push(gkey);
       }
-      if (order.length >= 50) break; // bound work; first 5 groups are complete by now
+      if (order.length >= 50) break;
     }
     return order.slice(0, 5).map((k) => map.get(k)!);
   }, [txns]);
 
-  const fmt = (n: number) => nf.format(Math.round(n));
+  // Western-digit, Arabic-word date + relative time (locale "ar-u-nu-latn").
+  const numLocale = locale === "ar" ? "ar-u-nu-latn" : "en-GB";
+  const dateStr = new Date().toLocaleDateString(numLocale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
   const rtf = useMemo(
-    () => new Intl.RelativeTimeFormat(locale === "ar" ? "ar" : "en", { numeric: "auto" }),
+    () =>
+      new Intl.RelativeTimeFormat(locale === "ar" ? "ar-u-nu-latn" : "en", {
+        numeric: "auto",
+      }),
     [locale],
   );
   const timeAgo = (iso: string) => {
@@ -199,13 +209,23 @@ export function DashboardView({
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerStart}>
-          <span className={styles.storeName}>{safeDisplay(storeName)}</span>
-          <span className={styles.divider} aria-hidden />
-          <span className={styles.greeting}>{d.welcome} 👋</span>
-        </div>
-        <div className={styles.headerEnd}>
+      {/* Top app bar */}
+      <header className={styles.topbar}>
+        <Link href="/settings" className={styles.brand} aria-label={d.settings}>
+          <span className={styles.avatar}>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" className={styles.avatarImg} />
+            ) : (
+              <span>{safeDisplay(initials)}</span>
+            )}
+          </span>
+          <span className={styles.brandText}>
+            <span className={styles.storeName}>{safeDisplay(storeName)}</span>
+            <span className={styles.date}>{dateStr}</span>
+          </span>
+        </Link>
+        <div className={styles.topActions}>
           <button
             type="button"
             className={styles.syncBtn}
@@ -231,210 +251,176 @@ export function DashboardView({
             current={locale}
             labels={{ arabic: common.arabic, english: common.english }}
           />
-          <Link href="/settings" className={styles.avatar} aria-label={d.settings}>
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="" className={styles.avatarImg} />
-            ) : (
-              <span>{initials}</span>
+          <Link
+            href="/notifications"
+            className={styles.bellBtn}
+            aria-label={d.notifications.title}
+          >
+            <IconBell size={24} />
+            {alerts.length > 0 && (
+              <span className={styles.bellBadge}>{nf.format(alerts.length)}</span>
             )}
           </Link>
-          <SignOutButton label={d.signOut} className={styles.iconBtn} />
         </div>
       </header>
 
       <main className={styles.main}>
         {/* Stats */}
         <section className={styles.stats}>
-          <div className={`${styles.statCard} ${styles.statPrimary} ${styles.glass}`}>
-            <div className={styles.statHead}>
-              <span className={styles.statLabel}>{d.salesToday}</span>
-              <span className={`${styles.statIcon} ${styles.iconBgPrimary}`}>
-                <IconTrendingUp size={22} />
-              </span>
-            </div>
-            <div className={styles.statValueRow}>
-              <span className={`${styles.statValue} ${styles.cPrimary}`}>{fmt(report.sales)}</span>
-              <span className={styles.statUnit}>{currency}</span>
-            </div>
+          <div className={styles.stat}>
+            <span className={styles.statLabel}>{d.salesToday}</span>
+            <span className={styles.statValue}>
+              {nf.format(Math.round(report.sales))}{" "}
+              <span className={styles.statUnit}>{baseSym}</span>
+            </span>
           </div>
-          <div className={`${styles.statCard} ${styles.statSecondary} ${styles.glass}`}>
-            <div className={styles.statHead}>
-              <span className={styles.statLabel}>{d.stockTitle}</span>
-              <span className={`${styles.statIcon} ${styles.iconBgSecondary}`}>
-                <IconBox size={22} />
-              </span>
-            </div>
-            <div className={styles.statValueRow}>
-              <span className={`${styles.statValue} ${styles.cSecondary}`}>{fmt(productCount)}</span>
+          <div className={styles.stat}>
+            <span className={styles.statLabel}>{d.stockTitle}</span>
+            <span className={styles.statValue}>
+              {nf.format(productCount)}{" "}
               <span className={styles.statUnit}>{d.productUnit}</span>
-            </div>
+            </span>
           </div>
-          <div className={`${styles.statCard} ${styles.statError} ${styles.glass}`}>
-            <div className={styles.statHead}>
-              <span className={styles.statLabel}>{d.totalDebt}</span>
-              <span className={`${styles.statIcon} ${styles.iconBgError}`}>
-                <IconWallet size={22} />
-              </span>
-            </div>
-            <div className={styles.statValueRow}>
-              <span className={`${styles.statValue} ${styles.cError}`}>{fmt(report.receivable)}</span>
-              <span className={styles.statUnit}>{currency}</span>
-            </div>
+          <div className={`${styles.stat} ${styles.statError}`}>
+            <span className={styles.statLabel}>{d.totalDebt}</span>
+            <span className={styles.statValue}>
+              {nf.format(Math.round(report.receivable))}{" "}
+              <span className={styles.statUnit}>{baseSym}</span>
+            </span>
           </div>
         </section>
 
-        {/* Primary CTA + action grid */}
-        <section className={styles.grid}>
-          <div className={styles.ctaCol}>
-            <Link href="/sell" className={styles.cta}>
-              <IconStore size={72} />
-              <span className={styles.ctaTitle}>{d.sell}</span>
-              <span className={styles.ctaPill}>
-                <IconPlus size={16} /> {d.newInvoice}
-              </span>
+        {/* Primary CTA */}
+        <Link href="/sell" className={styles.cta}>
+          <IconCart size={24} />
+          {d.newSaleInvoice}
+        </Link>
+
+        {/* Alerts */}
+        <section className={styles.card}>
+          <div className={styles.cardHead}>
+            <div className={styles.cardHeadTitle}>
+              <h2 className={styles.cardTitle}>{d.stockAlerts}</h2>
+              {alerts.length > 0 && (
+                <span className={styles.countBadge}>{nf.format(alerts.length)}</span>
+              )}
+            </div>
+            <Link href="/notifications" className={styles.viewAll}>
+              {d.viewAll}
             </Link>
           </div>
-          <div className={styles.actionsCol}>
-            <nav className={styles.actions}>
-              {actions.map((a) => (
-                <Link
-                  key={a.href}
-                  href={a.href}
-                  className={`${styles.action} ${styles.glass} ${styles[ACCENT[a.color]]}`}
-                >
-                  <span className={`${styles.actionIcon} ${styles[ICON_BG[a.color]]}`}>
-                    <a.Icon size={24} className={styles[a.color]} />
+          <div className={styles.list}>
+            {alerts.length === 0 ? (
+              <p className={styles.emptyRow}>{d.noAlerts}</p>
+            ) : (
+              alerts.slice(0, 3).map((a) => (
+                <Link key={a.key} href={a.href} className={styles.alertRow}>
+                  <span className={styles.alertDot} aria-hidden />
+                  <span className={styles.alertText}>
+                    {a.meta}: {safeDisplay(a.name)}
                   </span>
-                  <span className={styles.actionLabel}>{d[a.label]}</span>
                 </Link>
-              ))}
-            </nav>
+              ))
+            )}
           </div>
         </section>
 
-        {/* Recent activity + stock alerts */}
-        <section className={styles.panels}>
-          <div className={`${styles.panel} ${styles.glass}`}>
-            <div className={styles.panelHead}>
-              <h2 className={styles.panelTitle}>{d.recentActivity}</h2>
-              <Link href="/transactions" className={styles.panelLink}>
-                {d.viewAll}
-              </Link>
-            </div>
-            <div className={styles.activityList}>
-              {recent.length === 0 ? (
-                <p className={styles.emptyRow}>{d.noActivity}</p>
-              ) : (
-                recent.map((r) => {
-                  const income = INCOME.includes(r.type);
-                  return (
-                    <div key={r.key} className={styles.activityRow}>
-                      <div className={styles.activityMain}>
-                        <span
-                          className={`${styles.activityIcon} ${income ? styles.iconBgPrimary : styles.iconBgError}`}
-                        >
-                          <ActivityIcon type={r.type} size={20} />
-                        </span>
-                        <div className={styles.activityInfo}>
-                          <p className={styles.activityTitle}>{d.activity[r.type]}</p>
-                          <p className={styles.activitySub}>
-                            {timeAgo(r.at)} • {d.payments[r.payment]}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`${styles.activityAmount} ${income ? styles.amountIn : styles.amountOut}`}
-                      >
-                        {income ? "+" : "−"} {fmt(r.total)} {currency}
+        {/* Quick actions */}
+        <section className={styles.grid}>
+          {TILES.map((tile) => (
+            <Link key={tile.href} href={tile.href} className={styles.tile}>
+              <span className={styles.tileIcon}>
+                <tile.Icon size={30} />
+              </span>
+              <span className={styles.tileLabel}>{d.tiles[tile.key]}</span>
+            </Link>
+          ))}
+        </section>
+
+        {/* Uncollected debts */}
+        <section className={styles.card}>
+          <div className={styles.cardHead}>
+            <h2 className={styles.cardTitle}>{d.uncollectedDebts}</h2>
+            <Link href="/customers" className={styles.viewAll}>
+              {d.viewAll}
+            </Link>
+          </div>
+          <div className={styles.list}>
+            {debtors.length === 0 ? (
+              <p className={styles.emptyRow}>{d.noDebtors}</p>
+            ) : (
+              debtors.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/customers/${c.id}`}
+                  className={styles.debtRow}
+                >
+                  <span className={styles.debtName}>{safeDisplay(c.name)}</span>
+                  <span className={styles.debtAmount}>{money(c.amount)}</span>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* Recent activity */}
+        <section className={styles.card}>
+          <div className={styles.cardHead}>
+            <h2 className={styles.cardTitle}>{d.recentActivity}</h2>
+            <Link href="/transactions" className={styles.viewAll}>
+              {d.viewAll}
+            </Link>
+          </div>
+          <div className={styles.list}>
+            {recent.length === 0 ? (
+              <p className={styles.emptyRow}>{d.noActivity}</p>
+            ) : (
+              recent.map((r) => {
+                const income = INCOME.includes(r.type);
+                return (
+                  <div key={r.key} className={styles.activityRow}>
+                    <div className={styles.activityInfo}>
+                      <span className={styles.activityTitle}>
+                        {d.activity[r.type]}
                       </span>
+                      <span className={styles.activityTime}>{timeAgo(r.at)}</span>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <div className={`${styles.panel} ${styles.glass}`}>
-            <div className={styles.panelHead}>
-              <h2 className={styles.panelTitle}>{d.stockAlerts}</h2>
-              {lowStock.length > 0 && (
-                <span className={styles.alertBadge}>
-                  {d.alertsCount.replace("{n}", String(lowStock.length))}
-                </span>
-              )}
-            </div>
-            <div className={styles.alertsBody}>
-              {lowStock.length === 0 ? (
-                <p className={styles.emptyRow}>{d.noAlerts}</p>
-              ) : (
-                <>
-                  {lowStock.map((a) => {
-                    const ratio = a.min > 0 ? a.stock / a.min : 0;
-                    const critical = ratio < 0.34;
-                    const pct = Math.max(4, Math.min(100, Math.round(ratio * 100)));
-                    return (
-                      <div
-                        key={a.id}
-                        className={`${styles.alertItem} ${critical ? styles.alertError : styles.alertWarn}`}
-                      >
-                        <span
-                          className={`${styles.alertIcon} ${critical ? styles.iconBgError : styles.iconBgSecondary}`}
-                        >
-                          {critical ? <IconWarning size={22} /> : <IconAlert size={22} />}
-                        </span>
-                        <div className={styles.alertContent}>
-                          <div className={styles.alertRow}>
-                            <h3 className={styles.alertName}>{safeDisplay(a.name)}</h3>
-                            <span
-                              className={`${styles.alertRemaining} ${critical ? styles.cError : styles.cSecondary}`}
-                            >
-                              {d.remaining}: {fmt(a.stock)}
-                            </span>
-                          </div>
-                          <div className={styles.bar}>
-                            <div
-                              className={styles.barFill}
-                              style={{
-                                inlineSize: `${pct}%`,
-                                background: critical ? "var(--error)" : "var(--secondary)",
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <Link href="/buy" className={styles.orderBtn}>
-                    {d.orderGoods}
-                  </Link>
-                </>
-              )}
-            </div>
+                    <span
+                      className={`${styles.activityAmount} ${income ? styles.amountIn : styles.amountOut}`}
+                    >
+                      {income ? "+" : "−"} {money(r.total)}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
+
+        {/* Logout (kept reachable from the dashboard) */}
+        <SignOutButton label={d.signOut} className={styles.signOut} />
       </main>
 
-      {/* Mobile bottom nav */}
+      {/* Fixed bottom nav — always visible */}
       <nav className={styles.bottomNav}>
-        <Link href="/dashboard" className={`${styles.navItem} ${styles.navItemActive}`}>
-          <IconHome size={22} />
+        <Link href="/dashboard" className={`${styles.navItem} ${styles.navActive}`}>
+          <IconHome size={26} />
           <span>{d.nav.home}</span>
         </Link>
         <Link href="/products" className={styles.navItem}>
-          <IconBox size={22} />
+          <IconBox size={26} />
           <span>{d.nav.products}</span>
         </Link>
         <Link href="/sell" className={styles.navItem}>
-          <IconStore size={22} />
+          <IconStore size={26} />
           <span>{d.nav.sell}</span>
         </Link>
         <Link href="/reports" className={styles.navItem}>
-          <IconChart size={22} />
+          <IconChart size={26} />
           <span>{d.nav.reports}</span>
         </Link>
         <Link href="/settings" className={styles.navItem}>
-          <IconSettings size={22} />
+          <IconSettings size={26} />
           <span>{d.nav.settings}</span>
         </Link>
       </nav>
