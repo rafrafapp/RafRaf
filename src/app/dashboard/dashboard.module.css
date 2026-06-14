@@ -493,18 +493,6 @@
   transform: scale(0.9);
 }
 .navActive {
-  color: #1e3a8a; /* active: blue (icon + label) */
+  color: #1e3a8a; /* active: blue (icon + label) — no bar/underline */
   font-weight: 700;
-  position: relative;
-}
-.navActive::after {
-  content: "";
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 50%;
-  transform: translateX(-50%);
-  inline-size: 32px;
-  block-size: 3px;
-  background: #1e3a8a;
-  border-radius: 0 0 4px 4px;
 }
