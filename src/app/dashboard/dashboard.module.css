@@ -470,8 +470,9 @@
   display: flex;
   align-items: stretch;
   background: var(--surface);
-  border-block-start: 1px solid var(--outline-variant);
-  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.03);
+  /* one clean hairline above the nav — no shadow/second line/artifacts */
+  border-block-start: 1px solid #e2e8f0;
+  box-shadow: none;
   padding-block-end: env(safe-area-inset-bottom);
 }
 .navItem {
@@ -482,7 +483,7 @@
   justify-content: center;
   gap: 0.15rem;
   text-decoration: none;
-  color: var(--on-surface-variant);
+  color: #64748b; /* inactive: gray */
   font-size: 0.7rem;
   font-weight: 500;
   -webkit-tap-highlight-color: transparent;
@@ -492,7 +493,7 @@
   transform: scale(0.9);
 }
 .navActive {
-  color: var(--primary);
+  color: #1e3a8a; /* active: blue (icon + label) */
   font-weight: 700;
   position: relative;
 }
@@ -504,6 +505,6 @@
   transform: translateX(-50%);
   inline-size: 32px;
   block-size: 3px;
-  background: var(--primary);
+  background: #1e3a8a;
   border-radius: 0 0 4px 4px;
 }
