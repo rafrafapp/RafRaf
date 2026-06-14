@@ -4,24 +4,24 @@
    (ProductPicker, PartyPicker, Receipt, SyncBadge) that renders inside it. */
 
 .main {
-  /* dark-glass palette + app-var remap */
-  --primary: #4edea3;
-  --primary-container: #10b981;
-  --on-primary-container: #00422b;
-  --secondary: #ffb95f;
-  --error: #ffb4ab;
-  --sc-low: #131b2e;
-  --sc: #171f33;
-  --sc-high: #222a3d;
-  --glass: rgba(30, 41, 59, 0.7);
+  /* light/blue "banking" palette (matches the dashboard) + app-var remap */
+  --primary: #1e3a8a;
+  --primary-container: #1e3a8a;
+  --on-primary-container: #ffffff;
+  --secondary: #f59e0b;
+  --error: #ba1a1a;
+  --sc-low: #f2f3ff;
+  --sc: #ffffff;
+  --sc-high: #eaedff;
+  --glass: #ffffff;
 
-  --bg: #0b1326;
-  --surface: #171f33;
-  --text: #dae2fd;
-  --text-muted: #bbcabf;
-  --border: #3c4a42;
-  --brand: #4edea3;
-  --brand-contrast: #00422b;
+  --bg: #faf8ff;
+  --surface: #ffffff;
+  --text: #131b2e;
+  --text-muted: #444651;
+  --border: #e2e8f0;
+  --brand: #1e3a8a;
+  --brand-contrast: #ffffff;
 
   position: relative;
   min-height: 100dvh;
@@ -959,7 +959,7 @@
   transition: box-shadow 0.2s, transform 0.1s;
 }
 .addBtn:hover {
-  box-shadow: 0 0 22px -4px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 22px -4px rgba(30, 58, 138, 0.4);
 }
 .addBtn:active {
   transform: scale(0.98);
@@ -1004,58 +1004,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(78, 222, 163, 0.12);
+  background: rgba(30, 58, 138, 0.1);
   color: var(--primary);
   font-weight: 700;
   font-size: 0.85rem;
 }
 
-/* Ledger badge palettes — dark always (every screen using this sheet is dark). */
-.error,
-.badgeExpense {
-  background: #2a1414;
-  color: #f3b4b4;
-  border-color: #5b2222;
-}
-.badgeSell,
-.ageFresh,
-.debtClear {
-  color: #8fe3bb;
-  background: #11241b;
-  border-color: #1f5b3f;
-}
-.badgeBuy {
-  color: #9cc7ee;
-  background: #111d2a;
-  border-color: #1f3f5b;
-}
-.badgeReturn,
-.ageDue {
-  color: #f1d18a;
-  background: #2a230f;
-  border-color: #5b4a1f;
-}
-.confirmTitle {
-  color: #f1d18a;
-}
-.badgePay {
-  color: #8fd5da;
-  background: #0f2426;
-  border-color: #1f5358;
-}
-.badgeService {
-  color: #d6c8ff;
-  background: #221a3a;
-  border-color: #4a3a7a;
-}
-.ageOver,
-.debtPos {
-  color: #f3b4b4;
-}
-.ageOver {
-  background: #2a1414;
-  border-color: #5b2222;
-}
+/* (Ledger badge palettes use the LIGHT definitions above — the old dark-always
+   overrides were removed for the light/blue banking theme.) */
 
 /* ---- mobile (≤480px) ---- */
 @media (max-width: 480px) {

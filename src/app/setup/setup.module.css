@@ -4,26 +4,25 @@
    preserved so SetupWizard/page keep working unchanged. RTL/LTR via logical props. */
 
 .main {
-  /* dark-glass palette (same tokens as dashboard.module.css) */
-  --primary: #4edea3;
-  --primary-container: #10b981;
-  --on-primary-container: #00422b;
-  --secondary: #ffb95f;
-  --error: #ffb4ab;
-  --sc-low: #131b2e;
-  --sc: #171f33;
-  --sc-high: #222a3d;
-  --sc-highest: #2d3449;
-  --glass: rgba(30, 41, 59, 0.7);
+  /* light/blue "banking" palette (matches the dashboard) */
+  --primary: #1e3a8a;
+  --primary-container: #1e3a8a;
+  --on-primary-container: #ffffff;
+  --secondary: #f59e0b;
+  --error: #ba1a1a;
+  --sc-low: #f2f3ff;
+  --sc: #ffffff;
+  --sc-high: #eaedff;
+  --sc-highest: #e2e7ff;
+  --glass: #ffffff;
 
-  /* re-map app theme vars so descendant shared components go dark too */
-  --bg: #0b1326;
-  --surface: #171f33;
-  --text: #dae2fd;
-  --text-muted: #bbcabf;
-  --border: #3c4a42;
-  --brand: #4edea3;
-  --brand-contrast: #00422b;
+  --bg: #faf8ff;
+  --surface: #ffffff;
+  --text: #131b2e;
+  --text-muted: #444651;
+  --border: #e2e8f0;
+  --brand: #1e3a8a;
+  --brand-contrast: #ffffff;
 
   position: relative;
   min-block-size: 100dvh;
@@ -47,7 +46,7 @@
   inline-size: min(44rem, 92vw);
   block-size: 26rem;
   transform: translateX(-50%);
-  background: radial-gradient(circle at 50% 0%, rgba(78, 222, 163, 0.16), transparent 70%);
+  background: radial-gradient(circle at 50% 0%, rgba(30, 58, 138, 0.12), transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -79,10 +78,10 @@
   background: var(--glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--outline-variant, #c5c5d3);
   border-radius: 1.25rem;
   padding: clamp(1.5rem, 5vw, 2.25rem);
-  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
 }
 
 .title {
@@ -135,7 +134,7 @@
 .input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(78, 222, 163, 0.18);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 /* selects share .input; keep the value readable + a themed option list where possible */
 select.input {
@@ -163,7 +162,7 @@ select.input option {
   transition: box-shadow 0.2s, transform 0.1s, opacity 0.2s;
 }
 .submit:hover:not(:disabled) {
-  box-shadow: 0 0 24px -4px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 24px -4px rgba(30, 58, 138, 0.4);
 }
 .submit:active:not(:disabled) {
   transform: scale(0.99);
@@ -174,9 +173,9 @@ select.input option {
 }
 
 .error {
-  background: rgba(255, 180, 171, 0.12);
-  color: #ffb4ab;
-  border: 1px solid rgba(255, 180, 171, 0.35);
+  background: #fdecec;
+  color: #9b1c1c;
+  border: 1px solid #f5c2c2;
   border-radius: 0.75rem;
   padding: 0.7rem 0.85rem;
   margin: 0;

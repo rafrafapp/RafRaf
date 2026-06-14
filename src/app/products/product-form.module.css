@@ -1,22 +1,22 @@
 .main {
-  /* dark-glass palette + app-var remap (shared form backbone: product/customer/
-     supplier new + edit). Re-mapping the vars dark-themes the whole form. */
-  --primary: #4edea3;
-  --primary-container: #10b981;
-  --on-primary-container: #00422b;
-  --secondary: #ffb95f;
-  --error: #ffb4ab;
-  --sc-low: #131b2e;
-  --sc: #171f33;
-  --glass: rgba(30, 41, 59, 0.7);
+  /* light/blue "banking" palette (matches the dashboard) — shared form backbone:
+     product/customer/supplier new+edit + settings. */
+  --primary: #1e3a8a;
+  --primary-container: #1e3a8a;
+  --on-primary-container: #ffffff;
+  --secondary: #f59e0b;
+  --error: #ba1a1a;
+  --sc-low: #f2f3ff;
+  --sc: #ffffff;
+  --glass: #ffffff;
 
-  --bg: #0b1326;
-  --surface: #171f33;
-  --text: #dae2fd;
-  --text-muted: #bbcabf;
-  --border: #3c4a42;
-  --brand: #4edea3;
-  --brand-contrast: #00422b;
+  --bg: #faf8ff;
+  --surface: #ffffff;
+  --text: #131b2e;
+  --text-muted: #444651;
+  --border: #e2e8f0;
+  --brand: #1e3a8a;
+  --brand-contrast: #ffffff;
 
   min-height: 100dvh;
   display: flex;
@@ -233,19 +233,8 @@
   background: #fdecec;
 }
 
-/* error + delete are dark always (the form is dark-themed). */
-.error {
-  background: #2a1414;
-  color: #f3b4b4;
-  border-color: #5b2222;
-}
-.delete {
-  color: #f3b4b4;
-  border-color: #5b2222;
-}
-.delete:hover {
-  background: #2a1414;
-}
+/* (error + delete use the LIGHT definitions above — dark overrides removed for
+   the light/blue banking theme.) */
 
 /* Saved-draft banner (new product form). */
 .draftBanner {
@@ -254,7 +243,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  background: rgba(78, 222, 163, 0.1);
+  background: rgba(30, 58, 138, 0.08);
   border: 1px solid var(--brand);
   border-radius: 0.6rem;
   padding: 0.7rem 0.85rem;

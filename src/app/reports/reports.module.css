@@ -53,7 +53,7 @@
    the (colourless) .statValue inherits it; the muted .statLabel keeps its own.
    (Targeting .statValue directly fails — it's hashed to the transactions sheet.) */
 .statGood {
-  color: #8fe3bb;
+  color: #16a34a;
 }
 .statBad {
   color: var(--error);

@@ -4,24 +4,24 @@
    vars are re-mapped locally so shared components render dark. RTL via logical props. */
 
 .main {
-  --primary: #4edea3;
-  --primary-container: #10b981;
-  --on-primary-container: #00422b;
-  --secondary: #ffb95f;
-  --error: #ffb4ab;
-  --sc-low: #131b2e;
-  --sc: #171f33;
-  --sc-high: #222a3d;
-  --sc-highest: #2d3449;
-  --glass: rgba(30, 41, 59, 0.7);
+  --primary: #1e3a8a;
+  --primary-container: #1e3a8a;
+  --on-primary-container: #ffffff;
+  --secondary: #f59e0b;
+  --error: #ba1a1a;
+  --sc-low: #f2f3ff;
+  --sc: #ffffff;
+  --sc-high: #eaedff;
+  --sc-highest: #e2e7ff;
+  --glass: #ffffff;
 
-  --bg: #0b1326;
-  --surface: #171f33;
-  --text: #dae2fd;
-  --text-muted: #bbcabf;
-  --border: #3c4a42;
-  --brand: #4edea3;
-  --brand-contrast: #00422b;
+  --bg: #faf8ff;
+  --surface: #ffffff;
+  --text: #131b2e;
+  --text-muted: #444651;
+  --border: #e2e8f0;
+  --brand: #1e3a8a;
+  --brand-contrast: #ffffff;
 
   position: relative;
   min-block-size: 100dvh;
