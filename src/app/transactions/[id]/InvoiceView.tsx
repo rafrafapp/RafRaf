@@ -258,6 +258,7 @@ export function InvoiceView({
             title: tx.receipt.title,
             print: tx.receipt.print,
             share: tx.receipt.share,
+            pdf: tx.receipt.pdf,
             thanks: tx.receipt.thanks,
             total: tx.receipt.total,
             newSale: tx.receipt.close,

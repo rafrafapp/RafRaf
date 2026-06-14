@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Locale } from "@/i18n/config";
 import { escapeHtml } from "@/lib/validation/sanitize";
 import { sanitizeString } from "@/lib/validation/sanitize-html";
@@ -27,6 +28,7 @@ type Props = {
     title: string;
     print: string;
     share: string;
+    pdf: string;
     thanks: string;
     total: string;
     newSale: string;
@@ -55,6 +57,7 @@ export function Receipt({
   labels,
   onClose,
 }: Props) {
+  const [pdfBusy, setPdfBusy] = useState(false);
   const dateStr = new Date(dateIso).toLocaleString(
     locale === "ar" ? "ar" : "en-GB",
   );
@@ -132,6 +135,65 @@ export function Receipt({
     setTimeout(() => w.print(), 300);
   }
 
+  // Direct PDF download (no print dialog). Renders the same receipt design to a
+  // clean RTL node (inline hex styles so html2canvas never chokes), rasterizes it
+  // and saves a single-page PDF. Auto-downloads as rafraf-invoice-#XXXX.pdf.
+  async function downloadPdf() {
+    setPdfBusy(true);
+    let node: HTMLDivElement | null = null;
+    try {
+      const [{ default: jsPDF }, h2c] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+      const html2canvas = h2c.default;
+      const dir = locale === "ar" ? "rtl" : "ltr";
+      const cell =
+        "padding:3px 0;border-bottom:1px dashed #ccc;font-size:13px;";
+      const numCell = `${cell}text-align:end;white-space:nowrap;`;
+      const rows = lines
+        .map(
+          (l) =>
+            `<tr><td style="${cell}">${safeHtml(l.name)}</td><td style="${numCell}">${nf.format(l.qty)}×${nf.format(l.price)}</td><td style="${numCell}">${nf.format(l.total)}</td></tr>`,
+        )
+        .join("");
+      node = document.createElement("div");
+      node.setAttribute("dir", dir);
+      node.style.cssText =
+        "position:fixed;left:-10000px;top:0;width:320px;padding:16px;background:#ffffff;color:#111;font-family:'Segoe UI','Noto Sans Arabic',Arial,sans-serif;z-index:-1;";
+      node.innerHTML =
+        `<div style="font-size:18px;font-weight:800;text-align:center;color:#0e7c66;">${safeHtml(storeName)}</div>` +
+        (invoiceNo
+          ? `<div style="text-align:center;color:#666;font-size:12px;">${escapeHtml(invoiceNo)}</div>`
+          : "") +
+        `<div style="text-align:center;color:#666;font-size:12px;margin-bottom:8px;">${escapeHtml(dateStr)}</div>` +
+        `<table style="width:100%;border-collapse:collapse;">${rows}</table>` +
+        `<div style="display:flex;justify-content:space-between;font-weight:700;margin-top:8px;font-size:15px;"><span>${escapeHtml(labels.total)}</span><span>${nf.format(total)} ${safeHtml(currency)}</span></div>` +
+        (sypTotal != null
+          ? `<div style="text-align:center;color:#666;font-size:12px;margin-top:4px;">≈ ${nf.format(sypTotal)} ${safeHtml(baseSymbol ?? "")}</div>`
+          : "") +
+        `<div style="text-align:center;color:#0e7c66;font-size:12px;margin-top:10px;">${escapeHtml(labels.thanks)}</div>`;
+      document.body.appendChild(node);
+
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+      });
+      const w = canvas.width / 2;
+      const h = canvas.height / 2;
+      const pdf = new jsPDF({ unit: "px", format: [w, h], orientation: "p" });
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, w, h);
+      const idPart = (invoiceNo || "receipt").replace(/\s+/g, "");
+      pdf.save(`rafraf-invoice-${idPart}.pdf`);
+    } catch {
+      // Fall back to the print window if the PDF libs fail to load.
+      print();
+    } finally {
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+      setPdfBusy(false);
+    }
+  }
+
   return (
     <div
       className={styles.overlay}
@@ -176,6 +238,14 @@ export function Receipt({
           </button>
           <button type="button" className={styles.btnGhost} onClick={share}>
             {labels.share}
+          </button>
+          <button
+            type="button"
+            className={styles.btnGhost}
+            onClick={() => void downloadPdf()}
+            disabled={pdfBusy}
+          >
+            {pdfBusy ? `${labels.pdf}…` : `📄 ${labels.pdf}`}
           </button>
         </div>
         <button type="button" className={styles.btnGo} onClick={onClose}>
