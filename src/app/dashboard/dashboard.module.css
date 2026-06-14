@@ -494,7 +494,7 @@
 }
 /* small breathing room above the icon */
 .navItem svg {
-  margin-block-start: 2px;
+  margin-block-start: 5px;
 }
 .navActive {
   color: #1e3a8a; /* active: blue (icon + label) — no bar/underline */
