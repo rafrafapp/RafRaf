@@ -28,7 +28,7 @@
   background: var(--bg);
   color: var(--text);
   font-family: "IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
-  padding-block: 1.5rem 3rem;
+  padding-block: 1.5rem 6rem; /* clear the fixed bottom nav */
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
@@ -213,7 +213,29 @@
   border-radius: 0.75rem;
   padding: 0.7rem 0.85rem;
   padding-inline-start: 2.5rem;
+  padding-inline-end: 3rem; /* room for the scan button */
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+/* barcode scan button inside the search field (inline-end) */
+.searchScanBtn {
+  position: absolute;
+  inset-inline-end: 0.35rem;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  inline-size: 2.2rem;
+  block-size: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--brand);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.searchScanBtn:active {
+  transform: translateY(-50%) scale(0.92);
 }
 .categorySelect {
   font: inherit;
@@ -419,7 +441,7 @@
 /* ---- mobile (≤480px) ---- */
 @media (max-width: 480px) {
   .main {
-    padding-block: 1rem 2.5rem;
+    padding-block: 1rem 6rem;
   }
   .content {
     gap: 1rem;

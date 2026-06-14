@@ -15,7 +15,8 @@
     "optional": "optional",
     "back": "Back",
     "copy": "Copy",
-    "copied": "Copied ✅"
+    "copied": "Copied ✅",
+    "required": "This field is required"
   },
   "home": {
     "heading": "Welcome to RafRaf",
@@ -158,7 +159,8 @@
       "buy": "Buy",
       "returns": "Returns",
       "expenses": "Expenses",
-      "transactions": "History"
+      "transactions": "History",
+      "mobileCredit": "Mobile credit"
     },
     "notifications": {
       "title": "Notifications",

@@ -15,7 +15,8 @@
     "optional": "اختياري",
     "back": "رجوع",
     "copy": "نسخ",
-    "copied": "تم النسخ ✅"
+    "copied": "تم النسخ ✅",
+    "required": "هذا الحقل مطلوب"
   },
   "home": {
     "heading": "أهلاً بك في رف رف",
@@ -158,7 +159,8 @@
       "buy": "شراء",
       "returns": "مرتجعات",
       "expenses": "مصاريف",
-      "transactions": "السجل"
+      "transactions": "السجل",
+      "mobileCredit": "وحدات"
     },
     "notifications": {
       "title": "التنبيهات",

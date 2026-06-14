@@ -110,7 +110,6 @@ export function ReportsView({
     .replace("{from}", fmtDate(range.from))
     .replace("{to}", fmtDate(range.to));
 
-  const trendMax = Math.max(1, ...report.trend.map((d) => d.total));
   // Chart stats: best day, daily average, whether there's any data at all.
   const trendTotal = report.trend.reduce((sum, d) => sum + d.total, 0);
   const trendAvg = report.trend.length
@@ -127,6 +126,17 @@ export function ReportsView({
     maximumFractionDigits: 1,
   });
   const ddmm = (day: string) => `${day.slice(8)}/${day.slice(5, 7)}`;
+  // Arabic/EN short weekday name (السبت…) — no digits, so plain locale is fine.
+  const weekday = (day: string) =>
+    new Date(`${day}T00:00:00`).toLocaleDateString(
+      locale === "ar" ? "ar" : "en",
+      { weekday: "short" },
+    );
+  // Cap the chart to the most recent 7 days so bars stay wide/readable; the
+  // summary below still reflects the full period.
+  const chartTrend =
+    report.trend.length > 7 ? report.trend.slice(-7) : report.trend;
+  const chartMax = Math.max(1, ...chartTrend.map((d) => d.total));
 
   // ---- Exports -------------------------------------------------------------
   function summaryPairs(): [string, string][] {
@@ -566,23 +576,25 @@ export function ReportsView({
                 </div>
 
                 <div className={s.chartWrap}>
-                  {/* Y axis */}
+                  {/* Y axis (amounts in base currency) */}
                   <div className={s.yAxis}>
-                    <span>{cf.format(trendMax)}</span>
-                    <span>{cf.format(trendMax / 2)}</span>
+                    <span>
+                      {cf.format(chartMax)} {baseSym}
+                    </span>
+                    <span>{cf.format(chartMax / 2)}</span>
                     <span>0</span>
                   </div>
                   <div className={s.chart}>
                     {/* Average reference line */}
-                    {trendAvg > 0 && (
+                    {trendAvg > 0 && trendAvg <= chartMax && (
                       <div
                         className={s.avgLine}
-                        style={{ bottom: `${(trendAvg / trendMax) * 100}%` }}
+                        style={{ bottom: `${(trendAvg / chartMax) * 100}%` }}
                         title={`${r.chart.average}: ${money(trendAvg)}`}
                       />
                     )}
-                    {report.trend.map((d) => {
-                      const isMax = d.total > 0 && d.total === trendMax;
+                    {chartTrend.map((d) => {
+                      const isMax = d.total > 0 && d.total === chartMax;
                       return (
                         <div key={d.day} className={s.col}>
                           {d.total > 0 && (
@@ -597,20 +609,18 @@ export function ReportsView({
                             <span
                               className={`${s.colBar} ${isMax ? s.colBarMax : ""}`}
                               style={{
-                                height: `${Math.max(2, (d.total / trendMax) * 100)}%`,
+                                height: `${Math.max(2, (d.total / chartMax) * 100)}%`,
                               }}
                             />
                             <span className={s.tooltip}>
-                              <strong>{ddmm(d.day)}</strong>
+                              <strong>{weekday(d.day)} · {ddmm(d.day)}</strong>
                               <span>{money(d.total)}</span>
                               <span>
                                 {nf.format(d.count)} {r.chart.invoices}
                               </span>
                             </span>
                           </span>
-                          {report.trend.length <= 16 && (
-                            <span className={s.colDay}>{d.day.slice(8)}</span>
-                          )}
+                          <span className={s.colDay}>{weekday(d.day)}</span>
                         </div>
                       );
                     })}

@@ -4,6 +4,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { localeDirection } from "@/i18n/config";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { NumberInputGuard } from "@/components/NumberInputGuard";
+import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -54,6 +55,7 @@ export default async function RootLayout({
 }) {
   const locale = await getCurrentLocale();
   const dir = localeDirection[locale];
+  const dict = await getDictionary(locale);
 
   return (
     <html lang={locale} dir={dir}>
@@ -61,6 +63,7 @@ export default async function RootLayout({
         {children}
         <ServiceWorkerRegister />
         <NumberInputGuard />
+        <BottomNav labels={dict.dashboard.nav} />
       </body>
     </html>
   );

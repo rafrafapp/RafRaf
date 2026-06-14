@@ -12,7 +12,6 @@ import { useCurrencies } from "@/lib/offline/useCurrencies";
 import { safeDisplay } from "@/lib/validation/sanitize";
 import {
   IconBox,
-  IconStore,
   IconUsers,
   IconTruck,
   IconCart,
@@ -21,8 +20,7 @@ import {
   IconHistory,
   IconChart,
   IconBell,
-  IconHome,
-  IconSettings,
+  IconPhone,
 } from "./icons";
 import styles from "./dashboard.module.css";
 
@@ -38,9 +36,10 @@ type TileKey =
   | "buy"
   | "returns"
   | "expenses"
-  | "transactions";
+  | "transactions"
+  | "mobileCredit";
 
-// The 4×2 quick-action grid (exactly the design's eight tiles).
+// The quick-action grid.
 const TILES: { href: string; key: TileKey; Icon: IconComp }[] = [
   { href: "/products", key: "products", Icon: IconBox },
   { href: "/customers", key: "customers", Icon: IconUsers },
@@ -51,6 +50,12 @@ const TILES: { href: string; key: TileKey; Icon: IconComp }[] = [
   { href: "/expenses", key: "expenses", Icon: IconBanknote },
   { href: "/transactions", key: "transactions", Icon: IconHistory },
 ];
+// وحدات — only when the merchant offers mobile-credit top-ups.
+const MOBILE_CREDIT_TILE = {
+  href: "/mobile-credit",
+  key: "mobileCredit" as TileKey,
+  Icon: IconPhone,
+};
 
 // Money-in (+) vs money-out (−) for the recent-activity amount colour.
 const INCOME: TxType[] = [
@@ -78,10 +83,12 @@ export function DashboardView({
   currency,
   storeName,
   logoUrl,
+  offersMobileCredit,
   locale,
   dashboard: d,
   sync,
 }: Props) {
+  const tiles = offersMobileCredit ? [...TILES, MOBILE_CREDIT_TILE] : TILES;
   const { online, syncing } = useSync(merchantId);
   const { base } = useCurrencies(merchantId);
   const baseSym = base?.symbol ?? currency;
@@ -318,7 +325,7 @@ export function DashboardView({
 
         {/* Quick actions */}
         <section className={styles.grid}>
-          {TILES.map((tile) => (
+          {tiles.map((tile) => (
             <Link key={tile.href} href={tile.href} className={styles.tile}>
               <span className={styles.tileIcon}>
                 <tile.Icon size={30} />
@@ -389,30 +396,7 @@ export function DashboardView({
         </section>
 
       </main>
-
-      {/* Fixed bottom nav — always visible */}
-      <nav className={styles.bottomNav}>
-        <Link href="/dashboard" className={`${styles.navItem} ${styles.navActive}`}>
-          <IconHome size={26} />
-          <span>{d.nav.home}</span>
-        </Link>
-        <Link href="/products" className={styles.navItem}>
-          <IconBox size={26} />
-          <span>{d.nav.products}</span>
-        </Link>
-        <Link href="/sell" className={styles.navItem}>
-          <IconStore size={26} />
-          <span>{d.nav.sell}</span>
-        </Link>
-        <Link href="/reports" className={styles.navItem}>
-          <IconChart size={26} />
-          <span>{d.nav.reports}</span>
-        </Link>
-        <Link href="/settings" className={styles.navItem}>
-          <IconSettings size={26} />
-          <span>{d.nav.settings}</span>
-        </Link>
-      </nav>
+      {/* Bottom nav is rendered globally (components/BottomNav) on every page. */}
     </div>
   );
 }

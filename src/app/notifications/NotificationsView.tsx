@@ -9,7 +9,7 @@ import { getDb } from "@/lib/offline/db";
 import { useSync } from "@/lib/offline/useSync";
 import { useCurrencies } from "@/lib/offline/useCurrencies";
 import { safeDisplay } from "@/lib/validation/sanitize";
-import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import styles from "@/app/dashboard/dashboard.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -70,12 +70,13 @@ export function NotificationsView({
   const money = (v: number) => `${nf.format(Math.round(v))} ${baseSym}`;
 
   return (
-    <div className={styles.page} style={{ paddingBlockEnd: "1.5rem" }}>
-      <header className={styles.subHeader}>
-        <BackButton label={common.back} fallback="/dashboard" />
-        <h1 className={styles.subTitle}>{n.title}</h1>
-        {total > 0 && <span className={styles.countBadge}>{nf.format(total)}</span>}
-      </header>
+    <div className={styles.page}>
+      <PageHeader
+        title={n.title}
+        backHref="/dashboard"
+        backLabel={common.back}
+        showBell={false}
+      />
 
       <main className={styles.main}>
         {total === 0 ? (

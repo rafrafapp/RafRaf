@@ -135,9 +135,10 @@ export function Receipt({
     setTimeout(() => w.print(), 300);
   }
 
-  // Direct PDF download (no print dialog). Renders the same receipt design to a
-  // clean RTL node (inline hex styles so html2canvas never chokes), rasterizes it
-  // and saves a single-page PDF. Auto-downloads as rafraf-invoice-#XXXX.pdf.
+  // Direct PDF download (no print dialog). Renders the invoice to a clean A4-width
+  // node (inline hex styles so html2canvas never chokes), then lays it onto an
+  // **A4 portrait** page scaled to fit the width with 15mm margins, splitting
+  // across pages for long invoices. Never cuts content on mobile.
   async function downloadPdf() {
     setPdfBusy(true);
     let node: HTMLDivElement | null = null;
@@ -149,7 +150,7 @@ export function Receipt({
       const html2canvas = h2c.default;
       const dir = locale === "ar" ? "rtl" : "ltr";
       const cell =
-        "padding:3px 0;border-bottom:1px dashed #ccc;font-size:13px;";
+        "padding:8px 4px;border-bottom:1px solid #e2e8f0;font-size:15px;";
       const numCell = `${cell}text-align:end;white-space:nowrap;`;
       const rows = lines
         .map(
@@ -157,32 +158,46 @@ export function Receipt({
             `<tr><td style="${cell}">${safeHtml(l.name)}</td><td style="${numCell}">${nf.format(l.qty)}×${nf.format(l.price)}</td><td style="${numCell}">${nf.format(l.total)}</td></tr>`,
         )
         .join("");
+      // A4-proportioned width (px) so scaling to the page reads like a document.
       node = document.createElement("div");
       node.setAttribute("dir", dir);
       node.style.cssText =
-        "position:fixed;left:-10000px;top:0;width:320px;padding:16px;background:#ffffff;color:#111;font-family:'Segoe UI','Noto Sans Arabic',Arial,sans-serif;z-index:-1;";
+        "position:fixed;left:-10000px;top:0;width:720px;padding:28px;background:#ffffff;color:#111827;font-family:'Segoe UI','Noto Sans Arabic',Arial,sans-serif;z-index:-1;";
       node.innerHTML =
-        `<div style="font-size:18px;font-weight:800;text-align:center;color:#0e7c66;">${safeHtml(storeName)}</div>` +
-        (invoiceNo
-          ? `<div style="text-align:center;color:#666;font-size:12px;">${escapeHtml(invoiceNo)}</div>`
-          : "") +
-        `<div style="text-align:center;color:#666;font-size:12px;margin-bottom:8px;">${escapeHtml(dateStr)}</div>` +
+        `<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3a8a;padding-bottom:12px;margin-bottom:16px;">` +
+        `<div style="font-size:26px;font-weight:800;color:#1e3a8a;">${safeHtml(storeName)}</div>` +
+        `<div style="text-align:end;">${invoiceNo ? `<div style="font-size:18px;font-weight:700;color:#1e3a8a;">${escapeHtml(invoiceNo)}</div>` : ""}<div style="color:#666;font-size:13px;">${escapeHtml(dateStr)}</div></div>` +
+        `</div>` +
         `<table style="width:100%;border-collapse:collapse;">${rows}</table>` +
-        `<div style="display:flex;justify-content:space-between;font-weight:700;margin-top:8px;font-size:15px;"><span>${escapeHtml(labels.total)}</span><span>${nf.format(total)} ${safeHtml(currency)}</span></div>` +
+        `<div style="display:flex;justify-content:space-between;font-weight:700;margin-top:14px;font-size:18px;border-top:2px solid #1e3a8a;padding-top:10px;"><span>${escapeHtml(labels.total)}</span><span>${nf.format(total)} ${safeHtml(currency)}</span></div>` +
         (sypTotal != null
-          ? `<div style="text-align:center;color:#666;font-size:12px;margin-top:4px;">≈ ${nf.format(sypTotal)} ${safeHtml(baseSymbol ?? "")}</div>`
+          ? `<div style="text-align:end;color:#666;font-size:13px;margin-top:4px;">≈ ${nf.format(sypTotal)} ${safeHtml(baseSymbol ?? "")}</div>`
           : "") +
-        `<div style="text-align:center;color:#0e7c66;font-size:12px;margin-top:10px;">${escapeHtml(labels.thanks)}</div>`;
+        `<div style="text-align:center;color:#1e3a8a;font-size:13px;margin-top:18px;">${escapeHtml(labels.thanks)}</div>`;
       document.body.appendChild(node);
 
       const canvas = await html2canvas(node, {
         scale: 2,
         backgroundColor: "#ffffff",
       });
-      const w = canvas.width / 2;
-      const h = canvas.height / 2;
-      const pdf = new jsPDF({ unit: "px", format: [w, h], orientation: "p" });
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, w, h);
+      const data = canvas.toDataURL("image/jpeg", 0.92);
+
+      // A4 portrait, 15mm margins, fit-to-width, multi-page.
+      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "p" });
+      const margin = 15;
+      const contentW = 210 - margin * 2; // 180mm
+      const contentH = 297 - margin * 2; // 267mm
+      const imgW = contentW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      let heightLeft = imgH;
+      pdf.addImage(data, "JPEG", margin, margin, imgW, imgH);
+      heightLeft -= contentH;
+      while (heightLeft > 0) {
+        pdf.addPage();
+        const pos = margin - (imgH - heightLeft);
+        pdf.addImage(data, "JPEG", margin, pos, imgW, imgH);
+        heightLeft -= contentH;
+      }
       const idPart = (invoiceNo || "receipt").replace(/\s+/g, "");
       pdf.save(`rafraf-invoice-${idPart}.pdf`);
     } catch {

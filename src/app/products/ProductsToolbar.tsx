@@ -1,23 +1,43 @@
 "use client";
 
 import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./products.module.css";
 
-type Props = {
-  categories: string[];
-  labels: { search: string; filterCategory: string; allCategories: string };
+// Camera/decoder bundle is heavy + browser-only — load only when the scanner opens.
+const BarcodeScanner = dynamic(
+  () => import("@/components/BarcodeScanner").then((m) => m.BarcodeScanner),
+  { ssr: false },
+);
+
+type ScanLabels = {
+  title: string;
+  hint: string;
+  error: string;
+  close: string;
+  upload: string;
 };
 
-export function ProductsToolbar({ categories, labels }: Props) {
+type Props = {
+  categories: string[];
+  labels: {
+    search: string;
+    filterCategory: string;
+    allCategories: string;
+    scan: string;
+  };
+  scanLabels: ScanLabels;
+};
+
+export function ProductsToolbar({ categories, labels, scanLabels }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get("q") ?? "");
+  const [scanning, setScanning] = useState(false);
   const category = sp.get("category") ?? "";
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Build /products?… from the current filters. Page is intentionally dropped so
-  // any new search/filter starts back at page 1.
   function navigate(nextQ: string, nextCategory: string) {
     const params = new URLSearchParams();
     if (nextQ) params.set("q", nextQ);
@@ -29,7 +49,6 @@ export function ProductsToolbar({ categories, labels }: Props) {
   function onSearchChange(value: string) {
     setQ(value);
     clearTimeout(timer.current);
-    // Debounce so we don't navigate on every keystroke.
     timer.current = setTimeout(() => navigate(value, category), 350);
   }
 
@@ -57,6 +76,28 @@ export function ProductsToolbar({ categories, labels }: Props) {
           value={q}
           onChange={(e) => onSearchChange(e.target.value)}
         />
+        {/* Scan a barcode → fill the search → filter the list. */}
+        <button
+          type="button"
+          className={styles.searchScanBtn}
+          onClick={() => setScanning(true)}
+          aria-label={labels.scan}
+          title={labels.scan}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 5v14M7 5v14M11 5v14M14 5v14M18 5v14M21 5v14" />
+          </svg>
+        </button>
       </div>
       <select
         className={styles.categorySelect}
@@ -71,6 +112,18 @@ export function ProductsToolbar({ categories, labels }: Props) {
           </option>
         ))}
       </select>
+
+      {scanning && (
+        <BarcodeScanner
+          onDetected={(text) => {
+            setQ(text);
+            navigate(text, category);
+            setScanning(false);
+          }}
+          onClose={() => setScanning(false)}
+          labels={scanLabels}
+        />
+      )}
     </div>
   );
 }

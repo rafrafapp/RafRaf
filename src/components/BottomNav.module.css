@@ -1,0 +1,39 @@
+/* App-wide fixed bottom navigation (light/blue banking design). Rendered once in
+   the root layout; self-hides on public/auth/admin routes. */
+.bottomNav {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  z-index: 50;
+  block-size: 64px;
+  display: flex;
+  align-items: stretch;
+  background: #ffffff;
+  border-block-start: 1px solid #e2e8f0;
+  padding-block-end: env(safe-area-inset-bottom);
+  font-family: "IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
+}
+.navItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  text-decoration: none;
+  color: #64748b; /* inactive: gray */
+  font-size: 0.7rem;
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s;
+}
+.navItem svg {
+  margin-block-start: 2px;
+}
+.navItem:active {
+  transform: scale(0.9);
+}
+.navActive {
+  color: #1e3a8a; /* active: navy (icon + label), no bar */
+  font-weight: 700;
+}

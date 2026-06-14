@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import styles from "./BackButton.module.css";
 
-// Shared "← رجوع" back control. Goes to the previous page (router.back) when there
-// is history, otherwise to a known fallback route (default /dashboard). The chevron
-// is direction-aware (flips in RTL via CSS), so it always points "back".
+// Shared "← رجوع" back control. Always navigates to an EXPLICIT route (never
+// router.back()) so "back" is predictable from any entry point. `fallback` is the
+// target (default /dashboard). The chevron flips in RTL via CSS.
 export function BackButton({
   label,
   fallback = "/dashboard",
@@ -20,11 +20,7 @@ export function BackButton({
     <button
       type="button"
       className={`${styles.back} ${className}`}
-      onClick={() => {
-        if (typeof window !== "undefined" && window.history.length > 1)
-          router.back();
-        else router.push(fallback);
-      }}
+      onClick={() => router.push(fallback)}
     >
       <svg
         className={styles.icon}

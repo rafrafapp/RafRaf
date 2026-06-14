@@ -216,6 +216,14 @@ export function ProductsView({
           search: p.search,
           filterCategory: p.filterCategory,
           allCategories: p.allCategories,
+          scan: p.scan,
+        }}
+        scanLabels={{
+          title: p.scanTitle,
+          hint: p.scanHint,
+          error: p.scanError,
+          close: p.scanClose,
+          upload: p.scanUpload,
         }}
       />
 

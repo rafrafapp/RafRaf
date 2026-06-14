@@ -90,6 +90,7 @@ export function ProductForm({
   const [barcode, setBarcode] = useState(initial?.barcode ?? "");
   const [scanning, setScanning] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [nameError, setNameError] = useState(false);
 
   // Draft restore (create mode only).
   const draftLoadedRef = useRef(false);
@@ -260,6 +261,14 @@ export function ProductForm({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
+    // Custom Arabic validation (no native browser tooltip): name is required.
+    if (!str(formData, "name").trim()) {
+      setNameError(true);
+      setError(null);
+      return;
+    }
+    setNameError(false);
+
     // Assemble custom_fields from ONLY the keys valid for this business type.
     const custom: Record<string, string | number> = {};
     for (const def of customFields) {
@@ -279,10 +288,11 @@ export function ProductForm({
       barcode: str(formData, "barcode"),
       category: str(formData, "category"),
       subcategory: "",
-      cost_price: str(formData, "cost_price"),
-      sell_price: str(formData, "sell_price"),
-      stock: str(formData, "stock"),
-      min_stock: str(formData, "min_stock"),
+      // Empty number fields default to 0 (inputs start blank, not pre-filled "0").
+      cost_price: str(formData, "cost_price") || "0",
+      sell_price: str(formData, "sell_price") || "0",
+      stock: str(formData, "stock") || "0",
+      min_stock: str(formData, "min_stock") || "0",
       unit: str(formData, "unit"),
       notes: str(formData, "notes"),
       custom_fields: custom,
@@ -325,6 +335,7 @@ export function ProductForm({
       onInput={saveDraft}
       onChange={saveDraft}
       className={styles.form}
+      noValidate
     >
       {error && (
         <p className={styles.error} role="alert">
@@ -359,10 +370,14 @@ export function ProductForm({
         <input
           className={styles.input}
           name="name"
-          required
           maxLength={200}
           defaultValue={initial?.name ?? ""}
+          aria-invalid={nameError}
+          onInput={() => nameError && setNameError(false)}
         />
+        {nameError && (
+          <span className={styles.fieldError}>{common.required}</span>
+        )}
       </label>
 
       <label className={styles.label}>
@@ -428,7 +443,7 @@ export function ProductForm({
             step="any"
             inputMode="decimal"
             dir="ltr"
-            defaultValue={initial ? String(initial.cost_price) : "0"}
+            defaultValue={initial ? String(initial.cost_price) : ""}
           />
         </label>
         <label className={styles.label}>
@@ -441,7 +456,7 @@ export function ProductForm({
             step="any"
             inputMode="decimal"
             dir="ltr"
-            defaultValue={initial ? String(initial.sell_price) : "0"}
+            defaultValue={initial ? String(initial.sell_price) : ""}
           />
         </label>
       </div>
@@ -457,7 +472,7 @@ export function ProductForm({
             step="any"
             inputMode="decimal"
             dir="ltr"
-            defaultValue={initial ? String(initial.stock) : "0"}
+            defaultValue={initial ? String(initial.stock) : ""}
           />
         </label>
         <label className={styles.label}>
@@ -487,7 +502,7 @@ export function ProductForm({
           step="any"
           inputMode="decimal"
           dir="ltr"
-          defaultValue={initial ? String(initial.min_stock) : "0"}
+          defaultValue={initial ? String(initial.min_stock) : ""}
         />
         <span className={styles.muted}>{products.fields.minStockHint}</span>
       </label>

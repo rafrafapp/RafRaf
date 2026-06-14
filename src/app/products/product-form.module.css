@@ -23,7 +23,7 @@
   flex-direction: column;
   align-items: center;
   padding-inline: 1rem;
-  padding-block: 1.5rem;
+  padding-block: 1.5rem 6rem; /* clear the fixed bottom nav */
   background: var(--bg);
   color: var(--text);
   font-family: "IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
@@ -235,6 +235,13 @@
 
 /* (error + delete use the LIGHT definitions above — dark overrides removed for
    the light/blue banking theme.) */
+
+/* Inline field-level validation message (custom Arabic, not browser default). */
+.fieldError {
+  color: var(--error);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
 
 /* Saved-draft banner (new product form). */
 .draftBanner {
