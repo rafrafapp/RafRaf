@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchantContext } from "@/lib/auth/merchant";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BackButton } from "@/components/BackButton";
 import { QuickAddForm } from "../QuickAddForm";
 import styles from "../product-form.module.css";
@@ -24,12 +23,6 @@ export default async function NewProductPage() {
     <main className={styles.main}>
       <div className={styles.topbar}>
         <span className={styles.logo}>{dict.app.name}</span>
-        <div className={styles.headerActions}>
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: dict.common.arabic, english: dict.common.english }}
-          />
-        </div>
       </div>
 
       <div className={styles.card}>

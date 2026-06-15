@@ -58,6 +58,7 @@
   border: 1px solid var(--border);
   border-radius: 1rem;
   padding: clamp(1.25rem, 4vw, 2rem);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
 }
 
 .back {
@@ -80,7 +81,7 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 20px; /* clear separation between fields */
+  gap: 12px; /* separation between fields */
 }
 
 .label {
@@ -89,7 +90,7 @@
   gap: 6px;
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: #475569;
 }
 
 .muted {
@@ -103,11 +104,13 @@
   font: inherit;
   font-size: 16px; /* prevents iOS focus-zoom */
   font-weight: 400;
-  color: var(--text);
-  background: #ffffff;
+  color: #0f172a;
+  background: #f1f5f9;
   border: 1.5px solid #cbd5e1;
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 12px 16px;
+  inline-size: 100%;
+  box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .textarea {
@@ -115,22 +118,25 @@
 }
 .input::placeholder,
 .textarea::placeholder {
-  color: #9ca3af;
+  color: #94a3b8;
 }
 .input:focus,
 .textarea:focus {
   outline: none;
   border-color: #2563eb;
-  background: #f8faff;
+  background: #ffffff;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 /* Two-up field rows (price pair, stock + min-stock). Side by side on 360px+;
-   stack vertically on very small (<360px) screens so they aren't cramped. */
+   stack vertically below 360px. min-inline-size:0 stops grid overflow/cut-off. */
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 10px;
+}
+.row > * {
+  min-inline-size: 0;
 }
 
 @media (max-width: 359px) {
@@ -171,15 +177,16 @@
 }
 
 /* Grouped extra fields (business-type custom fields + the quick-add optional
-   section) — a soft light-blue rounded container. */
+   section) — a white card with a soft shadow, matching the required section. */
 .customSection {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   padding: 16px;
-  background: #f0f7ff;
-  border: 1px solid #dbe7fb;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
 }
 
 .submit {
@@ -453,21 +460,20 @@
   background: var(--brand);
 }
 
-/* ---- mobile (≤480px): white form container with comfortable side padding ---- */
+/* ---- mobile (≤480px): white card with comfortable side margins ---- */
 @media (max-width: 480px) {
   .main {
-    padding-inline: 0;
+    padding-inline: 12px;
     padding-block: 0.9rem 6rem; /* clear the fixed bottom nav */
   }
   .topbar {
     max-inline-size: 100%;
-    padding-inline: 16px;
   }
   .card {
     max-inline-size: 100%;
     background: var(--surface);
-    border: none;
-    border-radius: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
     padding: 16px;
   }
   .title {
