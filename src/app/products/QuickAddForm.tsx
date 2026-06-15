@@ -322,7 +322,9 @@ export function QuickAddForm({
               setMinStock(e.target.value);
             }}
           />
-          <span className={styles.muted}>{qa.minStockHint}</span>
+          {stock.trim() !== "" && (
+            <span className={styles.hintPill}>{qa.minStockHint}</span>
+          )}
         </label>
       </div>
 
