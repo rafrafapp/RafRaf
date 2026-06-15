@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
@@ -13,10 +12,8 @@ import {
   PAYMENT_METHODS,
   parsePositive,
 } from "@/lib/validation/transaction";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SyncBadge } from "@/components/SyncBadge";
 import { Spinner } from "@/components/Spinner";
-import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -35,14 +32,12 @@ type Props = {
 export function MobileCreditForm({
   merchantId,
   currency,
-  locale,
-  appName,
   tx,
   common,
   syncLabels,
 }: Props) {
   const router = useRouter();
-  const { online, syncing, sync } = useSync(merchantId);
+  const { online } = useSync(merchantId);
   const [provider, setProvider] = useState<string>(MOBILE_PROVIDERS[0]);
   const [amount, setAmount] = useState("");
   const [cost, setCost] = useState("");
@@ -85,32 +80,11 @@ export function MobileCreditForm({
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.logo}>
-          {appName}
-        </Link>
-        <div className={styles.headerActions}>
-          <SyncBadge
-            merchantId={merchantId}
-            online={online}
-            syncing={syncing}
-            onSync={() => void sync()}
-            labels={syncLabels}
-          />
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
-        </div>
-      </header>
-
-      <div className={styles.titleRow}>
-        <div>
-          <h1 className={styles.title}>📱 {m.title}</h1>
-          <p className={styles.subtitle}>{m.subtitle}</p>
-        </div>
-        <BackButton label={common.back} />
-      </div>
+      <PageHeader
+        title={`📱 ${m.title}`}
+        backHref="/dashboard"
+        backLabel={common.back}
+      />
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
 

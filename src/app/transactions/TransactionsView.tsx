@@ -14,10 +14,8 @@ import {
   formatInvoiceNo,
 } from "@/lib/offline/transactions-repo";
 import { safeDisplay } from "@/lib/validation/sanitize";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SyncBadge } from "@/components/SyncBadge";
 import { Spinner } from "@/components/Spinner";
-import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -61,12 +59,11 @@ type Entry = {
 export function TransactionsView({
   merchantId,
   locale,
-  appName,
   tx,
   common,
   syncLabels,
 }: Props) {
-  const { online, syncing, sync } = useSync(merchantId);
+  const { online, sync } = useSync(merchantId);
   const [filter, setFilter] = useState<Filter>("all");
   const [voidTarget, setVoidTarget] = useState<LocalTransaction | null>(null);
   const [voiding, setVoiding] = useState(false);
@@ -177,32 +174,11 @@ export function TransactionsView({
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.logo}>
-          {appName}
-        </Link>
-        <div className={styles.headerActions}>
-          <SyncBadge
-            merchantId={merchantId}
-            online={online}
-            syncing={syncing}
-            onSync={() => void sync()}
-            labels={syncLabels}
-          />
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
-        </div>
-      </header>
-
-      <div className={styles.titleRow}>
-        <div>
-          <h1 className={styles.title}>{tx.list.title}</h1>
-          <p className={styles.subtitle}>{tx.list.subtitle}</p>
-        </div>
-        <BackButton label={common.back} />
-      </div>
+      <PageHeader
+        title={tx.list.title}
+        backHref="/dashboard"
+        backLabel={common.back}
+      />
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
 

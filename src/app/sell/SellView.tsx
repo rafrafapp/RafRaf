@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb, type LocalProduct, type PaymentMethod } from "@/lib/offline/db";
@@ -17,13 +16,11 @@ import { PAYMENT_METHODS } from "@/lib/validation/transaction";
 import { fromBase, toBase } from "@/lib/validation/currency";
 import { useCurrencies, rateFor } from "@/lib/offline/useCurrencies";
 import { CurrencySelect } from "@/components/CurrencySelect";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SyncBadge } from "@/components/SyncBadge";
 import { ProductPicker } from "@/components/ProductPicker";
 import { PartyPicker, type Party } from "@/components/PartyPicker";
 import { Receipt, type ReceiptLine } from "@/components/Receipt";
 import { Spinner } from "@/components/Spinner";
-import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import { notifyOversell } from "@/lib/messaging/actions";
 import styles from "@/components/transactions.module.css";
 
@@ -57,13 +54,12 @@ export function SellView({
   currency,
   storeName,
   locale,
-  appName,
   tx,
   common,
   syncLabels,
   scanLabels,
 }: Props) {
-  const { online, syncing, sync } = useSync(merchantId);
+  const { online } = useSync(merchantId);
   const { currencies, base } = useCurrencies(merchantId);
   const [currencyCode, setCurrencyCode] = useState<string>("");
   // Resolve the active currency (falls back to the base while loading).
@@ -230,29 +226,7 @@ export function SellView({
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.logo}>
-          {appName}
-        </Link>
-        <div className={styles.headerActions}>
-          <SyncBadge
-            merchantId={merchantId}
-            online={online}
-            syncing={syncing}
-            onSync={() => void sync()}
-            labels={syncLabels}
-          />
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
-        </div>
-      </header>
-
-      <div className={styles.titleRow}>
-        <h1 className={styles.title}>{s.title}</h1>
-        <BackButton label={common.back} />
-      </div>
+      <PageHeader title={s.title} backHref="/dashboard" backLabel={common.back} />
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
 

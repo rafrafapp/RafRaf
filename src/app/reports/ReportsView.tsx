@@ -14,9 +14,7 @@ import {
   customRange,
   type ReportRange,
 } from "@/lib/reports/compute";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SyncBadge } from "@/components/SyncBadge";
-import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import { escapeHtml, safeDisplay } from "@/lib/validation/sanitize";
 import { sanitizeString } from "@/lib/validation/sanitize-html";
 import t from "@/components/transactions.module.css";
@@ -52,12 +50,11 @@ export function ReportsView({
   currency,
   storeName,
   locale,
-  appName,
   reports: r,
   common,
   syncLabels,
 }: Props) {
-  const { online, syncing, sync } = useSync(merchantId);
+  const { online } = useSync(merchantId);
   const { currencies, base } = useCurrencies(merchantId);
   const baseSym = base?.symbol ?? currency;
   const [preset, setPreset] = useState<Preset>("today");
@@ -395,34 +392,7 @@ export function ReportsView({
 
   return (
     <main className={t.main} style={{ maxWidth: "80rem" }}>
-      <header className={t.header}>
-        <Link href="/dashboard" className={t.logo}>
-          {appName}
-        </Link>
-        <div className={t.headerActions}>
-          <SyncBadge
-            merchantId={merchantId}
-            online={online}
-            syncing={syncing}
-            onSync={() => void sync()}
-            labels={syncLabels}
-          />
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
-        </div>
-      </header>
-
-      <div className={t.titleRow}>
-        <div>
-          <h1 className={t.title}>{r.title}</h1>
-          <p className={t.subtitle}>
-            {r.subtitle} · {rangeText}
-          </p>
-        </div>
-        <BackButton label={common.back} />
-      </div>
+      <PageHeader title={r.title} backHref="/dashboard" backLabel={common.back} />
 
       {!online && <p className={t.offlineHint}>{syncLabels.offlineHint}</p>}
 

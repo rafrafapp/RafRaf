@@ -17,10 +17,9 @@ import { useSync } from "@/lib/offline/useSync";
 import { parsePositive } from "@/lib/validation/transaction";
 import { sendDebtReminder } from "@/lib/messaging/actions";
 import type { TxType } from "@/lib/offline/db";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SyncBadge } from "@/components/SyncBadge";
 import { Spinner } from "@/components/Spinner";
 import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import { CustomerForm } from "./CustomerForm";
 import styles from "@/components/transactions.module.css";
 
@@ -49,13 +48,12 @@ export function CustomerView({
   merchantId,
   currency,
   locale,
-  appName,
   customers: c,
   common,
   tx,
   sync: syncLabels,
 }: Props) {
-  const { online, syncing, sync } = useSync(merchantId);
+  const { online } = useSync(merchantId);
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -162,29 +160,11 @@ export function CustomerView({
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.logo}>
-          {appName}
-        </Link>
-        <div className={styles.headerActions}>
-          <SyncBadge
-            merchantId={merchantId}
-            online={online}
-            syncing={syncing}
-            onSync={() => void sync()}
-            labels={syncLabels}
-          />
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
-        </div>
-      </header>
-
-      <div className={styles.titleRow}>
-        <h1 className={styles.title}>{customer.name}</h1>
-        <BackButton label={c.backToList} fallback="/customers" />
-      </div>
+      <PageHeader
+        title={customer.name}
+        backHref="/customers"
+        backLabel={c.backToList}
+      />
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
 

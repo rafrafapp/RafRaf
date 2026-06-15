@@ -8,9 +8,7 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb } from "@/lib/offline/db";
 import { useSync } from "@/lib/offline/useSync";
 import { safeDisplay } from "@/lib/validation/sanitize";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SyncStatus } from "@/components/SyncStatus";
-import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import styles from "@/components/transactions.module.css";
 
 const nf = new Intl.NumberFormat("en-US");
@@ -28,13 +26,11 @@ type Props = {
 export function CustomersView({
   merchantId,
   currency,
-  locale,
-  appName,
   customers: c,
   common,
   sync: syncLabels,
 }: Props) {
-  const { online, syncing, sync } = useSync(merchantId);
+  const { online, syncing } = useSync(merchantId);
   const [q, setQ] = useState("");
 
   const all = useLiveQuery(
@@ -45,16 +41,6 @@ export function CustomersView({
         .toArray(),
     [merchantId],
   );
-  const pending =
-    useLiveQuery(
-      () =>
-        getDb()
-          .customers.where("[merchant_id+_sync]")
-          .equals([merchantId, "pending"])
-          .count(),
-      [merchantId],
-      0,
-    ) ?? 0;
 
   const rows = all ?? [];
   const loading = all === undefined || (syncing && rows.length === 0);
@@ -84,46 +70,10 @@ export function CustomersView({
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.logo}>
-          {appName}
-        </Link>
-        <div className={styles.headerActions}>
-          <button
-            type="button"
-            className={styles.syncBtn}
-            onClick={() => void sync()}
-            disabled={!online || syncing}
-            title={syncLabels.retry}
-          >
-            <SyncStatus
-              online={online}
-              syncing={syncing}
-              pending={pending}
-              labels={{
-                online: syncLabels.online,
-                offline: syncLabels.offline,
-                syncing: syncLabels.syncing,
-                synced: syncLabels.synced,
-                pending: syncLabels.pending,
-              }}
-            />
-          </button>
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
-        </div>
-      </header>
+      <PageHeader title={c.title} backHref="/dashboard" backLabel={common.back} />
 
       <div className={styles.titleRow}>
-        <div>
-          <div style={{ marginBlockEnd: "0.5rem" }}>
-            <BackButton label={common.back} />
-          </div>
-          <h1 className={styles.title}>{c.title}</h1>
-          <p className={styles.subtitle}>{c.subtitle}</p>
-        </div>
+        <p className={styles.subtitle}>{c.subtitle}</p>
         <Link href="/customers/new" className={styles.addBtn}>
           <svg
             className={styles.addIcon}

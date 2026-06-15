@@ -9,10 +9,8 @@ import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb, type LocalProduct } from "@/lib/offline/db";
 import { useSync } from "@/lib/offline/useSync";
 import { safeDisplay } from "@/lib/validation/sanitize";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SyncStatus } from "@/components/SyncStatus";
 import { ProductsToolbar } from "./ProductsToolbar";
-import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import styles from "./products.module.css";
 
 const PAGE_SIZE = 20;
@@ -31,7 +29,6 @@ export function ProductsView({
   merchantId,
   currency,
   locale,
-  appName,
   products: p,
   common,
 }: Props) {
@@ -40,7 +37,7 @@ export function ProductsView({
   const category = sp.get("category") ?? "";
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1);
 
-  const { online, syncing, sync } = useSync(merchantId);
+  const { online, syncing } = useSync(merchantId);
 
   // Live, offline reads straight from IndexedDB — these re-render on any local
   // write or sync, online or offline.
@@ -52,16 +49,6 @@ export function ProductsView({
         .toArray(),
     [merchantId],
   );
-  const pending =
-    useLiveQuery(
-      () =>
-        getDb()
-          .products.where("[merchant_id+_sync]")
-          .equals([merchantId, "pending"])
-          .count(),
-      [merchantId],
-      0,
-    ) ?? 0;
   const conflicts =
     useLiveQuery(
       () =>
@@ -131,47 +118,10 @@ export function ProductsView({
 
   return (
     <main className={styles.main}>
+      <PageHeader title={p.title} backHref="/dashboard" backLabel={common.back} />
       <div className={styles.content}>
-      <header className={styles.header}>
-        <Link href="/dashboard" className={styles.logo}>
-          {appName}
-        </Link>
-        <div className={styles.headerActions}>
-          <button
-            type="button"
-            className={styles.syncBtn}
-            onClick={() => void sync()}
-            disabled={!online || syncing}
-            title={p.sync.retry}
-          >
-            <SyncStatus
-              online={online}
-              syncing={syncing}
-              pending={pending}
-              labels={{
-                online: p.sync.online,
-                offline: p.sync.offline,
-                syncing: p.sync.syncing,
-                synced: p.sync.synced,
-                pending: p.sync.pending,
-              }}
-            />
-          </button>
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
-        </div>
-      </header>
-
       <div className={styles.titleRow}>
-        <div>
-          <div style={{ marginBlockEnd: "0.5rem" }}>
-            <BackButton label={common.back} />
-          </div>
-          <h1 className={styles.title}>{p.title}</h1>
-          <p className={styles.subtitle}>{p.subtitle}</p>
-        </div>
+        <p className={styles.subtitle}>{p.subtitle}</p>
         <Link href="/products/new" className={styles.addBtn}>
           <svg
             className={styles.addIcon}

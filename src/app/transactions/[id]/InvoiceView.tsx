@@ -13,8 +13,7 @@ import {
   formatInvoiceNo,
 } from "@/lib/offline/transactions-repo";
 import { safeDisplay } from "@/lib/validation/sanitize";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { BackButton } from "@/components/BackButton";
+import { PageHeader } from "@/components/PageHeader";
 import { Receipt, type ReceiptLine } from "@/components/Receipt";
 import styles from "@/components/transactions.module.css";
 
@@ -36,7 +35,6 @@ export function InvoiceView({
   merchantId,
   storeName,
   locale,
-  appName,
   tx,
   common,
 }: Props) {
@@ -98,20 +96,11 @@ export function InvoiceView({
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <span className={styles.logo}>{appName}</span>
-        <div className={styles.headerActions}>
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: common.arabic, english: common.english }}
-          />
-        </div>
-      </header>
-
-      <div className={styles.titleRow}>
-        <h1 className={styles.title}>{tx.receipt.title}</h1>
-        <BackButton label={common.back} fallback="/transactions" />
-      </div>
+      <PageHeader
+        title={tx.receipt.title}
+        backHref="/transactions"
+        backLabel={common.back}
+      />
 
       {loading ? (
         <p className={styles.count}>{common.loading}</p>
