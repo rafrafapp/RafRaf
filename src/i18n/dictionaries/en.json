@@ -276,10 +276,20 @@
       "piece": "Piece",
       "kg": "Kg",
       "liter": "Liter",
+      "meter": "Meter",
       "box": "Box",
-      "carton": "Carton"
+      "carton": "Carton",
+      "dozen": "Dozen"
     },
     "selectUnit": "Select unit",
+    "quickAdd": {
+      "minStockHint": "Suggested: 10% of stock",
+      "optional": "Optional",
+      "searchCategory": "Search or add a category",
+      "addCategory": "Add “{q}” as a category",
+      "saveAnother": "Save & add another +",
+      "saved": "Product saved ✅"
+    },
     "customFields": {
       "expiry": "Expiry date",
       "size": "Size",

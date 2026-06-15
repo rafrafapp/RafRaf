@@ -4,7 +4,15 @@ import { NO_TAGS, BARCODE_RE, sanitizeText } from "./sanitize";
 // Stock units offered in the product form. Constrained here (input) and surfaced
 // as a <select>; the DB column stays free-text so CSV import (Phase 2 later) can
 // stay forgiving about messy real-world values.
-export const PRODUCT_UNITS = ["piece", "kg", "liter", "box", "carton"] as const;
+export const PRODUCT_UNITS = [
+  "piece",
+  "kg",
+  "liter",
+  "meter",
+  "box",
+  "carton",
+  "dozen",
+] as const;
 export type ProductUnit = (typeof PRODUCT_UNITS)[number];
 
 // Per-business-type extra fields persisted into products.custom_fields (JSONB).

@@ -2,15 +2,13 @@ import { redirect } from "next/navigation";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchantContext } from "@/lib/auth/merchant";
-import {
-  getBusinessTypeBySlug,
-  resolveCustomFields,
-} from "@/lib/business-types/read";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BackButton } from "@/components/BackButton";
-import { ProductForm } from "../ProductForm";
+import { QuickAddForm } from "../QuickAddForm";
 import styles from "../product-form.module.css";
 
+// /products/new uses the simpler Quick-Add form (the full edit form lives at
+// /products/[id]/edit).
 export default async function NewProductPage() {
   const user = await getUser();
   if (!user) redirect("/login");
@@ -21,8 +19,6 @@ export default async function NewProductPage() {
 
   const locale = await getCurrentLocale();
   const dict = await getDictionary(locale);
-  const bizType = await getBusinessTypeBySlug(merchant?.business_type ?? null);
-  const customFields = resolveCustomFields(bizType, locale);
 
   return (
     <main className={styles.main}>
@@ -39,13 +35,12 @@ export default async function NewProductPage() {
       <div className={styles.card}>
         <BackButton label={dict.products.backToList} fallback="/products" />
         <h1 className={styles.title}>{dict.products.addTitle}</h1>
-        <ProductForm
-          mode="create"
+        <QuickAddForm
           merchantId={merchant?.id ?? user.id}
-          customFields={customFields}
           products={dict.products}
           common={dict.common}
           currency={merchant?.default_currency ?? "SYP"}
+          locale={locale}
         />
       </div>
     </main>

@@ -274,12 +274,22 @@
     },
     "units": {
       "piece": "قطعة",
-      "kg": "كيلو",
+      "kg": "كغ",
       "liter": "لتر",
+      "meter": "متر",
       "box": "علبة",
-      "carton": "كرتونة"
+      "carton": "كرتونة",
+      "dozen": "دستة"
     },
     "selectUnit": "اختر الوحدة",
+    "quickAdd": {
+      "minStockHint": "مقترح: 10% من المخزون",
+      "optional": "اختياري",
+      "searchCategory": "ابحث أو أضف فئة",
+      "addCategory": "إضافة «{q}» كفئة",
+      "saveAnother": "حفظ وإضافة منتج آخر +",
+      "saved": "تم حفظ المنتج ✅"
+    },
     "customFields": {
       "expiry": "تاريخ الانتهاء",
       "size": "المقاس",

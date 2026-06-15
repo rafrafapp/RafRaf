@@ -243,6 +243,77 @@
   font-weight: 500;
 }
 
+/* Quick-add: optional-section toggle */
+.optionalToggle {
+  align-self: flex-start;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--brand);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+
+/* Quick-add: category smart-search combobox */
+.catWrap {
+  position: relative;
+}
+.catList {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: calc(100% + 0.25rem);
+  z-index: 20;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.15);
+  display: flex;
+  flex-direction: column;
+  max-block-size: 14rem;
+  overflow-y: auto;
+}
+.catItem,
+.catAdd {
+  appearance: none;
+  border: none;
+  background: transparent;
+  text-align: start;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+  color: var(--text);
+}
+.catItem:hover {
+  background: var(--sc-low);
+}
+.catAdd {
+  color: var(--brand);
+  font-weight: 600;
+  border-block-start: 1px solid var(--border);
+}
+
+/* Quick-add: success toast */
+.toast {
+  position: fixed;
+  inset-block-start: 1rem;
+  inset-inline: 0;
+  margin-inline: auto;
+  inline-size: max-content;
+  max-inline-size: 90vw;
+  z-index: 100;
+  background: #16a34a;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3);
+}
+
 /* Saved-draft banner (new product form). */
 .draftBanner {
   display: flex;
