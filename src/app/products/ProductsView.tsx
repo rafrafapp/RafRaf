@@ -122,22 +122,6 @@ export function ProductsView({
       <div className={styles.content}>
       <div className={styles.titleRow}>
         <p className={styles.subtitle}>{p.subtitle}</p>
-        <Link href="/products/new" className={styles.addBtn}>
-          <svg
-            className={styles.addIcon}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          {p.add}
-        </Link>
       </div>
 
       {!online && <p className={styles.offlineHint}>{p.sync.offlineHint}</p>}
@@ -176,6 +160,24 @@ export function ProductsView({
           upload: p.scanUpload,
         }}
       />
+
+      {/* Add-product button sits below the search + category filters. */}
+      <Link href="/products/new" className={styles.addBtnFull}>
+        <svg
+          className={styles.addIcon}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        {p.add}
+      </Link>
 
       {loading ? (
         <p className={styles.count}>{common.loading}</p>

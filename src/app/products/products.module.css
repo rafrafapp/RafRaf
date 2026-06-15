@@ -181,6 +181,30 @@
   flex-shrink: 0;
 }
 
+/* Full-width add-product button (below the search + category filters). */
+.addBtnFull {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  inline-size: 100%;
+  min-block-size: 48px;
+  margin-block-start: 0.85rem;
+  appearance: none;
+  border: none;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font: inherit;
+  font-weight: 700;
+  padding: 0.7rem 1.2rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  transition: box-shadow 0.2s, transform 0.1s;
+}
+.addBtnFull:active {
+  transform: scale(0.99);
+}
+
 /* toolbar */
 .toolbar {
   display: flex;
