@@ -28,7 +28,7 @@
   background: var(--bg);
   color: var(--text);
   font-family: "IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
-  padding-block: 1.5rem 6rem; /* clear the fixed bottom nav */
+  padding-block: 0 6rem; /* header flush to top; bottom clears the nav */
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
@@ -441,7 +441,7 @@
 /* ---- mobile (≤480px) ---- */
 @media (max-width: 480px) {
   .main {
-    padding-block: 1rem 6rem;
+    padding-block: 0 6rem;
   }
   .content {
     gap: 1rem;
