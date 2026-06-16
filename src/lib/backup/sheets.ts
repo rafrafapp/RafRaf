@@ -178,26 +178,44 @@ export async function backupMerchant(
   merchant: MerchantRow,
   triggeredBy: string,
 ): Promise<number> {
+  console.log(
+    `[backup] Starting backup for merchant: ${merchant.id} (${merchant.store_name})`,
+  );
   const admin = createAdminClient();
 
   let sheetId = merchant.google_sheet_id;
+  console.log(`[backup] Sheet ID: ${sheetId ?? "(none — will attempt to create)"}`);
   if (!sheetId) {
     const made = await createMerchantBackupSheet({
       id: merchant.id,
       email: merchant.email,
       storeName: merchant.store_name,
     });
-    if (!made)
+    if (!made) {
+      console.error(
+        `[backup] Sheet unavailable for merchant ${merchant.id} — service account has no Drive storage (set RAFRAF_SHARED_DRIVE_ID, link a sheet in admin, or rely on the master sheet)`,
+      );
       throw new Error(
         "per-merchant sheet unavailable (service account has no Drive storage — set RAFRAF_SHARED_DRIVE_ID, or rely on the master sheet)",
       );
+    }
     sheetId = made.sheetId;
+    console.log(`[backup] Created sheet ${sheetId} for merchant ${merchant.id}`);
     await admin
       .from("merchants")
       .update({ google_sheet_id: made.sheetId, google_sheet_url: made.sheetUrl })
       .eq("id", merchant.id);
   }
-  await ensureTabs(sheetId, MERCHANT_TABS);
+  try {
+    await ensureTabs(sheetId, MERCHANT_TABS);
+    console.log(`[backup] Auth successful — tabs ensured for ${merchant.id}`);
+  } catch (e) {
+    console.error(
+      `[backup] Auth/tabs failed for ${merchant.id}:`,
+      (e as Error)?.message ?? e,
+    );
+    throw e;
+  }
 
   const currency = merchant.default_currency ?? "SYP";
 
@@ -211,6 +229,9 @@ export async function backupMerchant(
   const products = (prodData ?? []) as ProductRow[];
   const costById = new Map(products.map((p) => [p.id, n(p.cost_price)]));
 
+  console.log(
+    `[backup] Writing products (${products.length}) for ${merchant.id}...`,
+  );
   const productRows: Row[] = products.map((p) => [
     p.name,
     p.name_en ?? "",
@@ -240,6 +261,9 @@ export async function backupMerchant(
     .limit(10000);
   const txns = (txData ?? []) as TxRow[];
 
+  console.log(
+    `[backup] Writing transactions (${txns.length}) for ${merchant.id}...`,
+  );
   const txRows: Row[] = txns.map((t) => [
     t.created_at,
     t.type,
@@ -296,6 +320,7 @@ export async function backupMerchant(
     status: "success",
     rows_backed: rowsBacked,
   });
+  console.log(`[backup] Done for merchant ${merchant.id}: ${rowsBacked} rows`);
   return rowsBacked;
 }
 
