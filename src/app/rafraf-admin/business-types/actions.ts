@@ -5,6 +5,7 @@ import { adminPath } from "@/lib/security/admin-path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperadmin, logAdminAction } from "@/lib/security/admin";
 import { businessTypeSchema } from "@/lib/validation/business-type";
+import { invalidateCache, cacheKeys } from "@/lib/cache/redis";
 
 // Superadmin-only business-type management. Each action re-verifies superadmin and
 // writes an admin_logs entry. Writes use the service-role client (business_types
@@ -57,6 +58,7 @@ export async function saveBusinessType(input: unknown): Promise<BtResult> {
     });
   }
 
+  await invalidateCache(cacheKeys.businessTypes);
   const bt = adminPath("/business-types");
   if (bt) revalidatePath(bt);
   revalidatePath("/setup");
@@ -78,6 +80,7 @@ export async function toggleBusinessType(
     actor: admin,
     details: { id, active },
   });
+  await invalidateCache(cacheKeys.businessTypes);
   const bt = adminPath("/business-types");
   if (bt) revalidatePath(bt);
   revalidatePath("/setup");
@@ -104,6 +107,7 @@ export async function deleteBusinessType(
     actor: admin,
     details: { slug },
   });
+  await invalidateCache(cacheKeys.businessTypes);
   const bt = adminPath("/business-types");
   if (bt) revalidatePath(bt);
   return { ok: true };

@@ -1,17 +1,31 @@
+import Link from "next/link";
 import { requireSuperadmin } from "@/lib/security/admin";
 import { getBackupStatuses } from "@/lib/admin/queries";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { safeDisplay } from "@/lib/validation/sanitize";
+import { adminPath } from "@/lib/security/admin-path";
 import { BackupGlobalControls, BackupRunButton } from "../controls";
 import styles from "../rafraf-admin.module.css";
 
-export default async function AdminBackupsPage() {
+export default async function AdminBackupsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ failed?: string }>;
+}) {
   await requireSuperadmin();
+  const { failed: failedParam } = await searchParams;
+  const failedOnly = failedParam === "1";
   const { perMerchant, failures } = await getBackupStatuses();
   const locale = await getCurrentLocale();
   const dict = await getDictionary(locale);
   const b = dict.admin.backups;
+
+  const rows = failedOnly
+    ? perMerchant.filter((r) => r.status === "error")
+    : perMerchant;
+  const base = adminPath("/backups") ?? "";
+  const clipId = (id: string) => (id.length > 14 ? id.slice(0, 12) + "…" : id);
 
   const fmt = (iso: string | null) =>
     iso
@@ -43,41 +57,82 @@ export default async function AdminBackupsPage() {
         }}
       />
 
+      <div className={styles.controlRow}>
+        <Link
+          href={base}
+          className={`${styles.navLink} ${!failedOnly ? styles.navActive : ""}`}
+        >
+          {b.filterAll}
+        </Link>
+        <Link
+          href={`${base}?failed=1`}
+          className={`${styles.navLink} ${failedOnly ? styles.navActive : ""}`}
+        >
+          {b.filterFailed}
+        </Link>
+      </div>
+
       <section className={styles.section}>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
                 <th>{b.store}</th>
-                <th>{b.status}</th>
+                <th>{b.sheetId}</th>
                 <th>{b.lastRun}</th>
+                <th>{b.status}</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {perMerchant.map((r) => {
-                const p = pill(r.status);
-                return (
-                  <tr key={r.merchantId}>
-                    <td>{safeDisplay(r.storeName)}</td>
-                    <td>
-                      <span className={`${styles.pill} ${p.cls}`}>{p.label}</span>
-                    </td>
-                    <td className={styles.muted}>{fmt(r.at)}</td>
-                    <td>
-                      <BackupRunButton
-                        merchantId={r.merchantId}
-                        labels={{
-                          runNow: b.runNow,
-                          running: b.running,
-                          done: b.done,
-                          failed: dict.admin.actionFailed,
-                        }}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className={styles.muted}>
+                    {b.noFailures}
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => {
+                  const p = pill(r.status);
+                  return (
+                    <tr key={r.merchantId}>
+                      <td>{safeDisplay(r.storeName)}</td>
+                      <td>
+                        {r.sheetId ? (
+                          <a
+                            className={styles.rowLink}
+                            dir="ltr"
+                            href={`https://docs.google.com/spreadsheets/d/${r.sheetId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {clipId(r.sheetId)}
+                          </a>
+                        ) : (
+                          <span className={`${styles.pill} ${styles.pillWarn}`}>
+                            {b.notLinked}
+                          </span>
+                        )}
+                      </td>
+                      <td className={styles.muted}>{fmt(r.at)}</td>
+                      <td>
+                        <span className={`${styles.pill} ${p.cls}`}>{p.label}</span>
+                      </td>
+                      <td>
+                        <BackupRunButton
+                          merchantId={r.merchantId}
+                          labels={{
+                            runNow: b.runNow,
+                            running: b.running,
+                            done: b.done,
+                            failed: dict.admin.actionFailed,
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

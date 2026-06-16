@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { getUser } from "@/lib/auth/merchant";
 import { createClient } from "@/lib/supabase/server";
+import { invalidateCache, cacheKeys } from "@/lib/cache/redis";
 import { signUpload, destroyImage, type SignedUpload } from "./server";
 
 // Auth-checked Cloudinary actions. The merchant id (= auth.uid()) scopes every
@@ -56,6 +57,7 @@ export async function updateStoreLogo(
     .update({ logo_url: logoUrl, logo_public_id: logoPublicId })
     .eq("id", user.id);
   if (error) return { ok: false, error: "failed" };
+  await invalidateCache(cacheKeys.merchant(user.id));
 
   if (old && old !== logoPublicId) await destroyImage(old);
   return { ok: true };

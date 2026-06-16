@@ -5,6 +5,7 @@ import { localeDirection } from "@/i18n/config";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { NumberInputGuard } from "@/components/NumberInputGuard";
 import { BottomNav } from "@/components/BottomNav";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -63,6 +64,7 @@ export default async function RootLayout({
         {children}
         <ServiceWorkerRegister />
         <NumberInputGuard />
+        <OfflineBanner text={dict.offlineBanner.text} />
         <BottomNav labels={dict.dashboard.nav} />
       </body>
     </html>

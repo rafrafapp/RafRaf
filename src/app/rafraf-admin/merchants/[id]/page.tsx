@@ -11,6 +11,7 @@ import {
   PlanControl,
   BillingForm,
   ImpersonateButton,
+  SheetIdControl,
 } from "../../controls";
 import styles from "../../rafraf-admin.module.css";
 
@@ -47,6 +48,14 @@ export default async function AdminMerchantDetailPage({
       : "—";
 
   const txTypes = dict.transactions.types as Record<string, string>;
+  const b = dict.admin.backups;
+  const backupStatus = detail.backup.status;
+  const backupPill =
+    backupStatus === "success"
+      ? { cls: styles.pillOk, label: b.success }
+      : backupStatus === "error"
+        ? { cls: styles.pillBad, label: b.error }
+        : { cls: styles.pillWarn, label: b.never };
 
   const stats: { label: string; value: string }[] = [
     { label: d.products, value: nf.format(detail.products) },
@@ -129,6 +138,40 @@ export default async function AdminMerchantDetailPage({
             save: d.save,
             markPaid: d.markPaid,
             saved: d.saved,
+            failed: dict.admin.actionFailed,
+          }}
+        />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>{d.backup}</h2>
+        <div className={styles.controlRow}>
+          <span className={styles.detailLabel}>{b.status}</span>
+          <span className={`${styles.pill} ${detail.sheetId ? styles.pillOk : styles.pillWarn}`}>
+            {detail.sheetId ? b.linked : b.notLinked}
+          </span>
+          <span className={`${styles.pill} ${backupPill.cls}`}>{backupPill.label}</span>
+          <span className={styles.muted}>
+            {b.lastRun}: {fmt(detail.backup.at)}
+          </span>
+        </div>
+        <SheetIdControl
+          merchantId={id}
+          sheetId={detail.sheetId}
+          sheetUrl={detail.sheetUrl}
+          labels={{
+            sheetIdLabel: b.sheetIdLabel,
+            placeholder: b.sheetIdPlaceholder,
+            save: b.saveSheetId,
+            saved: d.saved,
+            test: b.testConnection,
+            testing: b.testing,
+            connected: b.connected,
+            notConnected: b.notConnected,
+            openSheet: b.openSheet,
+            runNow: b.runNow,
+            running: b.running,
+            done: b.done,
             failed: dict.admin.actionFailed,
           }}
         />

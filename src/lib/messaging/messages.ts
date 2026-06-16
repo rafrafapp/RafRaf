@@ -54,3 +54,35 @@ export function oversellMessage(o: {
 export function backupFailureMessage(o: { scope: string; count: number }): string {
   return `🛑 RafRaf: فشل النسخ الاحتياطي (${o.scope}) — ${nf.format(o.count)} حالة.\nراجع سجل backup_logs.`;
 }
+
+// Daily backup digest sent to the admin's Telegram after the nightly cron run.
+export function backupDailySummaryMessage(o: {
+  succeeded: number;
+  attempted: number;
+  skipped: number;
+  failures: { store: string; error: string }[];
+}): string {
+  const lines = [
+    `🗂️ النسخ الاحتياطي اليومي: ${nf.format(o.succeeded)}/${nf.format(o.attempted)} نجح`,
+  ];
+  if (o.skipped > 0)
+    lines.push(`⏭️ تم تخطّي ${nf.format(o.skipped)} متجر (لا يوجد جدول مرتبط).`);
+  if (o.failures.length > 0) {
+    lines.push("🛑 إخفاقات:");
+    for (const f of o.failures.slice(0, 10))
+      lines.push(`• ${f.store}: ${f.error.slice(0, 120)}`);
+  } else {
+    lines.push("✅ لا إخفاقات.");
+  }
+  return lines.join("\n");
+}
+
+// Owner-triggered "please back me up" request sent to the admin's Telegram.
+export function backupRequestMessage(o: {
+  storeName: string;
+  email: string | null;
+}): string {
+  return `🔔 طلب نسخة احتياطية\nالمتجر: «${o.storeName}»${
+    o.email ? `\nالبريد: ${o.email}` : ""
+  }\nالرجاء تشغيل نسخة احتياطية لهذا المتجر.`;
+}

@@ -10,6 +10,9 @@ import {
 import { createMerchantBackupSheet } from "@/lib/backup/sheets";
 import { sendWelcomeEmail } from "@/lib/email/notify";
 import { getBusinessTypeBySlug } from "@/lib/business-types/read";
+import { notifyAdmin } from "@/lib/messaging/dispatch";
+import { backupRequestMessage } from "@/lib/messaging/messages";
+import { invalidateCache, cacheKeys } from "@/lib/cache/redis";
 
 export type SetupState = { error?: string };
 
@@ -142,5 +145,33 @@ export async function updateNotificationSettings(
     })
     .eq("id", user.id);
   if (error) return { error: "failed" };
+  await invalidateCache(cacheKeys.merchant(user.id));
+  return { ok: true };
+}
+
+// Owner asks the RafRaf team to run a manual backup of their store. We can't have
+// the merchant trigger a cross-tenant backup themselves (service role is admin-only),
+// so this just pings the admin's Telegram. RLS scopes the merchant lookup to the
+// caller's own row.
+export async function requestBackup(): Promise<{ ok?: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthorized" };
+
+  const { data } = await supabase
+    .from("merchants")
+    .select("store_name,email")
+    .maybeSingle<{ store_name: string; email: string | null }>();
+  if (!data) return { error: "failed" };
+
+  try {
+    await notifyAdmin(
+      backupRequestMessage({ storeName: data.store_name, email: data.email }),
+    );
+  } catch {
+    return { error: "failed" };
+  }
   return { ok: true };
 }

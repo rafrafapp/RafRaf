@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchant } from "@/lib/auth/merchant";
+import { getMerchantBackupStatus } from "@/lib/backup/status";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -9,6 +10,7 @@ import { SettingsForm } from "./SettingsForm";
 import { PasswordChangeForm } from "./PasswordChangeForm";
 import { LogoUpload } from "./LogoUpload";
 import { CurrenciesSection } from "./CurrenciesSection";
+import { BackupSection } from "./BackupSection";
 import styles from "@/app/products/product-form.module.css";
 
 export default async function SettingsPage() {
@@ -19,6 +21,16 @@ export default async function SettingsPage() {
 
   const locale = await getCurrentLocale();
   const dict = await getDictionary(locale);
+
+  // Backup connection + last-run status (admin-only table, read via service role
+  // pinned to this merchant's id).
+  const backup = await getMerchantBackupStatus(merchant.id);
+  const lastBackupAt = backup.at
+    ? new Date(backup.at).toLocaleString(locale === "ar" ? "ar" : "en-GB", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : null;
 
   // Only email/password accounts can change a password here (Google users manage
   // theirs with Google).
@@ -67,6 +79,16 @@ export default async function SettingsPage() {
         <h1 className={styles.title}>{dict.settings.logo.title}</h1>
         <p className={styles.muted}>{dict.settings.logo.subtitle}</p>
         <LogoUpload initialUrl={merchant.logo_url} labels={dict.settings.logo} />
+      </div>
+
+      <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
+        <h1 className={styles.title}>{dict.settings.backup.title}</h1>
+        <p className={styles.muted}>{dict.settings.backup.subtitle}</p>
+        <BackupSection
+          linked={Boolean(merchant.google_sheet_id)}
+          lastBackupAt={lastBackupAt}
+          labels={dict.settings.backup}
+        />
       </div>
 
       {hasPassword && (

@@ -18,6 +18,9 @@
     "copied": "Copied ✅",
     "required": "This field is required"
   },
+  "offlineBanner": {
+    "text": "You are offline — your data is saved locally"
+  },
   "home": {
     "heading": "Welcome to RafRaf",
     "subheading": "A smart, secure, offline-ready inventory system — the replacement for the notebook and Excel.",
@@ -699,6 +702,19 @@
       "failed": "Could not save. Please try again.",
       "unauthorized": "Session expired. Please sign in again."
     },
+    "backup": {
+      "title": "Backup",
+      "subtitle": "A copy of your data on Google Sheets, managed by the RafRaf team.",
+      "status": "Status",
+      "linked": "Linked ✅",
+      "notLinked": "Not linked — contact support to connect your sheet.",
+      "lastBackup": "Last backup",
+      "never": "Not run yet",
+      "request": "Request a backup",
+      "requesting": "Sending…",
+      "requested": "Request sent to the team ✅",
+      "requestFailed": "Couldn't send the request. Please try again."
+    },
     "currencies": {
       "title": "Currencies",
       "subtitle": "Add the currencies you deal in and update exchange rates manually. The Syrian Pound is the base currency.",
@@ -869,7 +885,8 @@
       "impersonate": "View as this store",
       "impersonating": "Viewing data for: {store} (read-only)",
       "stopImpersonate": "Stop viewing",
-      "noTx": "No transactions"
+      "noTx": "No transactions",
+      "backup": "Backup"
     },
     "backups": {
       "title": "Backup control center",
@@ -885,7 +902,21 @@
       "failures": "Failed backups",
       "noFailures": "No failures",
       "running": "Running…",
-      "done": "Done"
+      "done": "Done",
+      "sheetId": "Sheet ID",
+      "sheetIdLabel": "Google Sheet ID or URL",
+      "sheetIdPlaceholder": "1AbC… or the full sheet URL",
+      "saveSheetId": "Save ID",
+      "openSheet": "Open sheet",
+      "linked": "Linked",
+      "notLinked": "Not linked",
+      "testConnection": "Test connection",
+      "testing": "Testing…",
+      "connected": "Connected ✅",
+      "notConnected": "Not connected ❌",
+      "filterAll": "All",
+      "filterFailed": "Failed only",
+      "skipped": "Skipped (no sheet)"
     },
     "security": {
       "title": "Security logs",

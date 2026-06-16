@@ -299,33 +299,58 @@ export async function backupMerchant(
   return rowsBacked;
 }
 
-// Back up every merchant. One merchant's failure is logged and skipped so it
-// can't block the rest of the run.
-export async function backupAllMerchants(
-  triggeredBy: string,
-): Promise<{ merchants: number; succeeded: number; failed: number }> {
+// Back up every merchant. A merchant with no linked sheet is SKIPPED (not failed)
+// when we also can't auto-create one — a consumer service account has 0 Drive
+// storage, so nothing can be created there. One merchant's failure is logged and
+// skipped so it can't block the rest of the run.
+export async function backupAllMerchants(triggeredBy: string): Promise<{
+  merchants: number;
+  attempted: number;
+  succeeded: number;
+  failed: number;
+  skipped: number;
+  failures: { store: string; error: string }[];
+}> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("merchants")
     .select("id,email,store_name,google_sheet_id,default_currency");
   const merchants = (data ?? []) as MerchantRow[];
+  // Auto-creation only works inside a Shared Drive; otherwise an unlinked merchant
+  // has nowhere to back up to.
+  const canCreate = Boolean(process.env.RAFRAF_SHARED_DRIVE_ID?.trim());
 
   let succeeded = 0;
   let failed = 0;
+  let skipped = 0;
+  const failures: { store: string; error: string }[] = [];
   for (const m of merchants) {
+    if (!m.google_sheet_id && !canCreate) {
+      skipped++;
+      continue;
+    }
     try {
       await backupMerchant(m, triggeredBy);
       succeeded++;
     } catch (e) {
       failed++;
+      const error = (e as Error)?.message ?? String(e);
+      failures.push({ store: m.store_name, error });
       await logBackup({
         merchant_id: m.id,
         scope: "merchant",
         triggeredBy,
         status: "error",
-        error: (e as Error)?.message ?? String(e),
+        error,
       });
     }
   }
-  return { merchants: merchants.length, succeeded, failed };
+  return {
+    merchants: merchants.length,
+    attempted: succeeded + failed,
+    succeeded,
+    failed,
+    skipped,
+    failures,
+  };
 }

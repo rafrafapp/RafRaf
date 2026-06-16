@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { withCache, cacheKeys } from "@/lib/cache/redis";
 import type { ProductCustomField } from "@/lib/validation/product";
 
 // Merchant-facing reads of the admin-managed business types (RLS: SELECT to
@@ -27,15 +28,21 @@ export type BusinessTypeRow = {
 const COLS = "id,slug,name_ar,name_en,custom_fields,active,sort";
 
 export async function getActiveBusinessTypes(): Promise<BusinessTypeRow[]> {
+  // Global config, read on every setup + product form → cached for an hour.
+  // We throw on a query error so the failed read is NOT cached (the outer catch
+  // returns [] uncached); only a successful read is stored.
   try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("business_types")
-      .select(COLS)
-      .eq("active", true)
-      .order("sort", { ascending: true })
-      .order("name_ar", { ascending: true });
-    return (data ?? []) as BusinessTypeRow[];
+    return await withCache(cacheKeys.businessTypes, 3600, async () => {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("business_types")
+        .select(COLS)
+        .eq("active", true)
+        .order("sort", { ascending: true })
+        .order("name_ar", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as BusinessTypeRow[];
+    });
   } catch {
     return [];
   }

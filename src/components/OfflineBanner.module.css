@@ -1,0 +1,41 @@
+/* Global offline banner (light/blue banking design). Fixed just above the bottom
+   nav; yellow so it's unmistakable. Rendered nothing at all when online. */
+.banner {
+  position: fixed;
+  inset-inline: 0;
+  /* Sit above the 64px bottom nav (plus the iOS home-indicator inset). */
+  inset-block-end: calc(64px + env(safe-area-inset-bottom));
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: #fde047; /* yellow-300 */
+  color: #713f12; /* amber-900 — readable on yellow */
+  font-family: "IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  border-block-start: 1px solid #facc15;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  animation: offlineSlideUp 0.25s ease-out;
+}
+.icon {
+  flex: 0 0 auto;
+}
+@keyframes offlineSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+}

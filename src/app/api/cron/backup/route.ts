@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { backupAllMerchants } from "@/lib/backup/sheets";
 import { authorizeCron } from "@/lib/backup/cron-auth";
 import { notifyAdmin } from "@/lib/messaging/dispatch";
-import { backupFailureMessage } from "@/lib/messaging/messages";
+import { backupDailySummaryMessage } from "@/lib/messaging/messages";
 
 // googleapis needs the Node runtime (not edge); never statically cached.
 export const runtime = "nodejs";
@@ -17,11 +17,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     const result = await backupAllMerchants("cron");
-    if (result.failed > 0) {
-      await notifyAdmin(
-        backupFailureMessage({ scope: "merchant", count: result.failed }),
-      );
-    }
+    // Always send the daily digest to the admin (success count + per-merchant
+    // failures); best-effort, no-op when no admin chat id is set.
+    await notifyAdmin(backupDailySummaryMessage(result));
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     return NextResponse.json(

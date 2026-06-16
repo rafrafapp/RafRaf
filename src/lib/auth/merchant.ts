@@ -2,6 +2,7 @@ import "server-only";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser, isOfflineError } from "@/lib/supabase/session";
+import { withCache, cacheKeys, isCacheConfigured } from "@/lib/cache/redis";
 
 // The merchant (tenant) record, plus the session identity attached to it.
 // This is how "session attaches merchantId, plan, role" is realized: derived
@@ -38,14 +39,26 @@ export async function getUser(): Promise<User | null> {
 }
 
 // The current user's merchant row, or null if they haven't completed setup.
-// RLS guarantees this can only ever return the caller's own row.
+// RLS guarantees this can only ever return the caller's own row. Cached for 5
+// minutes keyed by the session user id (so it's tenant-isolated); a null result
+// (no row yet / offline blip) is never cached, and the cache is invalidated by
+// every writer of the merchant row (settings save, store setup, admin plan/billing/
+// sheet changes, logo upload).
 export async function getMerchant(): Promise<Merchant | null> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("merchants")
-    .select("*")
-    .maybeSingle<Merchant>();
-  return data ?? null;
+  const run = async (): Promise<Merchant | null> => {
+    const { data } = await supabase
+      .from("merchants")
+      .select("*")
+      .maybeSingle<Merchant>();
+    return data ?? null;
+  };
+  // When the cache is off (the default) behave exactly as before — no extra auth
+  // call just to build a key we won't use.
+  if (!isCacheConfigured()) return run();
+  const user = await getSessionUser(supabase);
+  if (!user) return run();
+  return withCache(cacheKeys.merchant(user.id), 300, run);
 }
 
 export type MerchantContext =

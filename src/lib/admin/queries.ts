@@ -1,6 +1,10 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isBackupConfigured } from "@/lib/backup/google";
+import {
+  getMerchantBackupStatus,
+  type MerchantBackupStatus,
+} from "@/lib/backup/status";
 import { isTelegramConfigured } from "@/lib/messaging/telegram";
 import { parseAllowedIps } from "@/lib/security/admin-ip";
 
@@ -23,6 +27,8 @@ export type AdminMerchant = {
   created_at: string;
   billing_notes: string | null;
   last_paid_at: string | null;
+  google_sheet_id: string | null;
+  google_sheet_url: string | null;
 };
 
 export type OverviewMetrics = {
@@ -42,7 +48,7 @@ export type OverviewMetrics = {
 const num = (v: unknown): number => Number(v ?? 0) || 0;
 
 const MERCHANT_COLS =
-  "id,store_name,store_name_en,email,phone,plan,role,default_currency,business_type,last_active,created_at,billing_notes,last_paid_at";
+  "id,store_name,store_name_en,email,phone,plan,role,default_currency,business_type,last_active,created_at,billing_notes,last_paid_at,google_sheet_id,google_sheet_url";
 
 export async function listMerchants(): Promise<AdminMerchant[]> {
   const { data } = await createAdminClient()
@@ -123,6 +129,9 @@ export type MerchantDetail = {
   customers: number;
   suppliers: number;
   outstandingDebt: number;
+  sheetId: string | null;
+  sheetUrl: string | null;
+  backup: MerchantBackupStatus;
   recentTx: {
     id: string;
     type: string;
@@ -139,7 +148,7 @@ export async function getMerchantDetail(
   if (!merchant) return null;
   const admin = createAdminClient();
 
-  const [pc, tc, cc, sc, debt, recent] = await Promise.all([
+  const [pc, tc, cc, sc, debt, recent, backup] = await Promise.all([
     admin
       .from("products")
       .select("id", { count: "exact", head: true })
@@ -163,6 +172,7 @@ export async function getMerchantDetail(
       .eq("merchant_id", id)
       .order("created_at", { ascending: false })
       .limit(20),
+    getMerchantBackupStatus(id),
   ]);
 
   const outstandingDebt = ((debt.data ?? []) as { debt_balance: unknown }[])
@@ -176,6 +186,9 @@ export async function getMerchantDetail(
     customers: cc.count ?? 0,
     suppliers: sc.count ?? 0,
     outstandingDebt,
+    sheetId: merchant.google_sheet_id,
+    sheetUrl: merchant.google_sheet_url,
+    backup,
     recentTx: ((recent.data ?? []) as MerchantDetail["recentTx"]).map((t) => ({
       ...t,
       total: num(t.total),
@@ -186,6 +199,7 @@ export async function getMerchantDetail(
 export type BackupStatus = {
   merchantId: string;
   storeName: string;
+  sheetId: string | null;
   status: string | null;
   at: string | null;
   error: string | null;
@@ -204,7 +218,6 @@ export async function getBackupStatuses(): Promise<{
 }> {
   const admin = createAdminClient();
   const merchants = await listMerchants();
-  const nameById = new Map(merchants.map((m) => [m.id, m.store_name]));
 
   const { data: logs } = await admin
     .from("backup_logs")
@@ -214,7 +227,10 @@ export async function getBackupStatuses(): Promise<{
   const rows = logs ?? [];
 
   // Latest "merchant"-scope run per merchant.
-  const latest = new Map<string, BackupStatus>();
+  const latest = new Map<
+    string,
+    { status: string | null; at: string | null; error: string | null }
+  >();
   for (const l of rows as {
     merchant_id: string | null;
     scope: string | null;
@@ -225,23 +241,22 @@ export async function getBackupStatuses(): Promise<{
     if (l.scope !== "merchant" || !l.merchant_id) continue;
     if (latest.has(l.merchant_id)) continue;
     latest.set(l.merchant_id, {
-      merchantId: l.merchant_id,
-      storeName: nameById.get(l.merchant_id) ?? l.merchant_id,
       status: l.status,
       at: l.created_at,
       error: l.error,
     });
   }
-  const perMerchant: BackupStatus[] = merchants.map(
-    (m) =>
-      latest.get(m.id) ?? {
-        merchantId: m.id,
-        storeName: m.store_name,
-        status: null,
-        at: null,
-        error: null,
-      },
-  );
+  const perMerchant: BackupStatus[] = merchants.map((m) => {
+    const l = latest.get(m.id);
+    return {
+      merchantId: m.id,
+      storeName: m.store_name,
+      sheetId: m.google_sheet_id ?? null,
+      status: l?.status ?? null,
+      at: l?.at ?? null,
+      error: l?.error ?? null,
+    };
+  });
 
   const failures = (
     rows as {

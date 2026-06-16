@@ -10,6 +10,8 @@ import {
   runAllBackups,
   runMasterUpdate,
   broadcast,
+  setMerchantSheetId,
+  testMerchantSheet,
 } from "./actions";
 import styles from "./rafraf-admin.module.css";
 
@@ -185,6 +187,110 @@ export function BackupRunButton({
       </button>
       {msg && (
         <span className={styles.status} title={msg}>
+          {msg}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function SheetIdControl({
+  merchantId,
+  sheetId,
+  sheetUrl,
+  labels,
+}: {
+  merchantId: string;
+  sheetId: string | null;
+  sheetUrl: string | null;
+  labels: {
+    sheetIdLabel: string;
+    placeholder: string;
+    save: string;
+    saved: string;
+    test: string;
+    testing: string;
+    connected: string;
+    notConnected: string;
+    openSheet: string;
+    runNow: string;
+    running: string;
+    done: string;
+    failed: string;
+  };
+}) {
+  const [value, setValue] = useState(sheetId ?? "");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [ok, setOk] = useState<boolean | null>(null);
+  const [pending, start] = useTransition();
+
+  return (
+    <div className={styles.panel}>
+      <label className={styles.status}>{labels.sheetIdLabel}</label>
+      <input
+        className={styles.input}
+        value={value}
+        dir="ltr"
+        placeholder={labels.placeholder}
+        disabled={pending}
+        onChange={(e) => setValue(e.target.value)}
+      />
+      <div className={styles.controlRow}>
+        <button
+          type="button"
+          className={styles.btn}
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              const r = await setMerchantSheetId(merchantId, value);
+              setOk(r.ok);
+              setMsg(r.ok ? labels.saved : clip(r.error ?? labels.failed));
+            })
+          }
+        >
+          {labels.save}
+        </button>
+        <button
+          type="button"
+          className={styles.btn}
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              setMsg(labels.testing);
+              const r = await testMerchantSheet(merchantId);
+              setOk(r.ok);
+              setMsg(
+                r.ok
+                  ? `${labels.connected} ${r.message ?? ""}`.trim()
+                  : `${labels.notConnected} ${clip(r.error ?? "")}`.trim(),
+              );
+            })
+          }
+        >
+          {pending ? labels.testing : labels.test}
+        </button>
+        {sheetUrl && (
+          <a
+            className={styles.rowLink}
+            href={sheetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {labels.openSheet}
+          </a>
+        )}
+      </div>
+      <BackupRunButton
+        merchantId={merchantId}
+        labels={{
+          runNow: labels.runNow,
+          running: labels.running,
+          done: labels.done,
+          failed: labels.failed,
+        }}
+      />
+      {msg && (
+        <span className={ok ? styles.statusOk : styles.statusBad} title={msg}>
           {msg}
         </span>
       )}

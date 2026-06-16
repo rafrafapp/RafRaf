@@ -7,8 +7,10 @@ import { adminPath } from "@/lib/security/admin-path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperadmin, logAdminAction } from "@/lib/security/admin";
 import { backupMerchant, backupAllMerchants } from "@/lib/backup/sheets";
+import { verifySheetAccess } from "@/lib/backup/verify";
 import { updateMasterSheet } from "@/lib/backup/master";
 import { notifyMerchant } from "@/lib/messaging/dispatch";
+import { invalidateCache, cacheKeys } from "@/lib/cache/redis";
 
 // Every action re-verifies superadmin server-side (the route gate is not trusted
 // alone) and writes an admin_logs audit entry. Cross-tenant writes go through the
@@ -44,6 +46,7 @@ export async function changePlan(
     .update({ plan })
     .eq("id", merchantId);
   if (error) return { ok: false, error: "failed" };
+  await invalidateCache(cacheKeys.merchant(merchantId));
 
   await logAdminAction({
     action: "plan_change",
@@ -73,6 +76,7 @@ export async function updateBilling(
     .update(patch)
     .eq("id", merchantId);
   if (error) return { ok: false, error: "failed" };
+  await invalidateCache(cacheKeys.merchant(merchantId));
 
   await logAdminAction({
     action: markPaid ? "billing_mark_paid" : "billing_update",
@@ -155,10 +159,74 @@ export async function runAllBackups(): Promise<ActionResult> {
     await logAdminAction({ action: "backup_run_all", actor: admin, details: res });
     const bk = adminPath("/backups");
     if (bk) revalidatePath(bk);
-    return { ok: true, message: `${res.succeeded}/${res.merchants}` };
+    return { ok: true, message: `${res.succeeded}/${res.attempted}` };
   } catch (e) {
     return { ok: false, error: (e as Error)?.message ?? "failed" };
   }
+}
+
+// Pull a Google Sheet id out of a pasted value: accept a bare id or a full
+// spreadsheet URL (…/spreadsheets/d/<ID>/edit). Returns null if neither matches.
+function extractSheetId(input: string): string | null {
+  const s = input.trim();
+  if (!s) return null;
+  const m = s.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (m) return m[1];
+  if (/^[a-zA-Z0-9-_]+$/.test(s)) return s;
+  return null;
+}
+
+// Admin links (or clears) a merchant's backup sheet. We reuse the existing
+// merchants.google_sheet_id column the backup engine already reads — no new column.
+// An empty input clears the link; a non-empty but malformed value is rejected.
+export async function setMerchantSheetId(
+  merchantId: string,
+  sheetIdRaw: string,
+): Promise<ActionResult> {
+  const admin = await requireSuperadmin();
+  const id = extractSheetId(sheetIdRaw);
+  if (sheetIdRaw.trim() && !id) return { ok: false, error: "invalid_sheet_id" };
+
+  const patch = id
+    ? {
+        google_sheet_id: id,
+        google_sheet_url: `https://docs.google.com/spreadsheets/d/${id}`,
+      }
+    : { google_sheet_id: null, google_sheet_url: null };
+
+  const { error } = await createAdminClient()
+    .from("merchants")
+    .update(patch)
+    .eq("id", merchantId);
+  if (error) return { ok: false, error: "failed" };
+  await invalidateCache(cacheKeys.merchant(merchantId));
+
+  await logAdminAction({
+    action: "backup_sheet_set",
+    actor: admin,
+    targetMerchantId: merchantId,
+    details: { sheetId: id },
+  });
+  const detail = adminPath(`/merchants/${merchantId}`);
+  const bk = adminPath("/backups");
+  if (detail) revalidatePath(detail);
+  if (bk) revalidatePath(bk);
+  return { ok: true, message: id ?? "" };
+}
+
+// Live-check that the service account can open the merchant's linked sheet.
+export async function testMerchantSheet(
+  merchantId: string,
+): Promise<ActionResult> {
+  await requireSuperadmin();
+  const { data } = await createAdminClient()
+    .from("merchants")
+    .select("google_sheet_id")
+    .eq("id", merchantId)
+    .maybeSingle<{ google_sheet_id: string | null }>();
+  const res = await verifySheetAccess(data?.google_sheet_id ?? null);
+  if (res.ok) return { ok: true, message: res.title ?? "" };
+  return { ok: false, error: res.error ?? "failed" };
 }
 
 export async function runMasterUpdate(): Promise<ActionResult> {
