@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useTutorial } from "@/hooks/useTutorial";
+import { TutorialOverlay, type TutorialStep } from "@/components/Tutorial/TutorialOverlay";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
@@ -35,6 +37,13 @@ type Props = {
   syncLabels: Dictionary["products"]["sync"];
 };
 
+const REPORTS_STEPS: TutorialStep[] = [
+  { target: "#date-selector", title_ar: "اختر الفترة", text_ar: "شوف تقارير اليوم أو الأسبوع أو الشهر أو فترة مخصصة", position: "bottom" },
+  { target: "#stats-cards", title_ar: "ملخص المبيعات", text_ar: "مبيعاتك وأرباحك ومصاريفك لهالفترة", position: "bottom" },
+  { target: "#sales-chart", title_ar: "حركة المبيعات", text_ar: "رسم بياني يظهر مبيعاتك يوم بيوم", position: "top" },
+  { target: "#export-btns", title_ar: "تصدير التقارير", text_ar: "حمّل تقريرك كـ PDF أو Excel", position: "top" },
+];
+
 function fmtDate(ms: number): string {
   const d = new Date(ms);
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -54,6 +63,7 @@ export function ReportsView({
   common,
   syncLabels,
 }: Props) {
+  const tutorial = useTutorial("reports");
   const { online } = useSync(merchantId);
   const { currencies, base } = useCurrencies(merchantId);
   const baseSym = base?.symbol ?? currency;
@@ -393,10 +403,15 @@ export function ReportsView({
   return (
     <main className={t.main} style={{ maxWidth: "80rem" }}>
       <PageHeader title={r.title} backHref="/dashboard" backLabel={common.back} />
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBlockEnd: "0.25rem" }}>
+        <button type="button" onClick={tutorial.reset} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "3px 8px", fontSize: "0.75rem", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}>
+          ؟ شرح التطبيق
+        </button>
+      </div>
 
       {!online && <p className={t.offlineHint}>{syncLabels.offlineHint}</p>}
 
-      <div className={s.controls}>
+      <div className={s.controls} id="date-selector">
         <div className={t.filters}>
           {periods.map((p) => (
             <button
@@ -435,7 +450,7 @@ export function ReportsView({
           </div>
         )}
 
-        <div className={s.exportRow}>
+        <div className={s.exportRow} id="export-btns">
           <button
             type="button"
             className={t.btnGhost}
@@ -459,7 +474,7 @@ export function ReportsView({
         <p className={t.count}>{common.loading}</p>
       ) : (
         <>
-          <section className={s.grid}>
+          <section className={s.grid} id="stats-cards">
             {card(r.summary.sales, money(report.sales), "good")}
             {card(
               r.summary.netProfit,
@@ -509,7 +524,7 @@ export function ReportsView({
           )}
 
           {/* Trend */}
-          <section className={s.section}>
+          <section className={s.section} id="sales-chart">
             <h2 className={s.sectionTitle}>{r.sections.trend}</h2>
             {!trendHasData ? (
               <div className={s.chartEmpty}>
@@ -735,6 +750,13 @@ export function ReportsView({
             </section>
           </div>
         </>
+      )}
+      {tutorial.show && (
+        <TutorialOverlay
+          steps={REPORTS_STEPS}
+          onComplete={tutorial.onComplete}
+          onSkip={tutorial.onSkip}
+        />
       )}
     </main>
   );

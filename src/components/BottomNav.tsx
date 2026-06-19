@@ -52,7 +52,7 @@ export function BottomNav({ labels }: { labels: NavLabels }) {
   if (hidden) return null;
 
   return (
-    <nav className={styles.bottomNav}>
+    <nav className={styles.bottomNav} id="bottom-nav">
       {ITEMS.map((it) => {
         const active =
           pathname === it.href || pathname.startsWith(it.href + "/");

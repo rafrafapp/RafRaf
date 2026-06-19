@@ -53,7 +53,7 @@ export function ProductsToolbar({ categories, labels, scanLabels }: Props) {
   }
 
   return (
-    <div className={styles.toolbar}>
+    <div className={styles.toolbar} id="search-products">
       <div className={styles.searchWrap}>
         <svg
           className={styles.searchIcon}

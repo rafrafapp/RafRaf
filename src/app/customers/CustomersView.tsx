@@ -9,7 +9,15 @@ import { getDb } from "@/lib/offline/db";
 import { useSync } from "@/lib/offline/useSync";
 import { safeDisplay } from "@/lib/validation/sanitize";
 import { PageHeader } from "@/components/PageHeader";
+import { useTutorial } from "@/hooks/useTutorial";
+import { TutorialOverlay, type TutorialStep } from "@/components/Tutorial/TutorialOverlay";
 import styles from "@/components/transactions.module.css";
+
+const CUSTOMERS_STEPS: TutorialStep[] = [
+  { target: "#total-debt", title_ar: "إجمالي الديون", text_ar: "مجموع كل الديون غير المحصّلة", position: "bottom" },
+  { target: "#customer-list", title_ar: "قائمة الزبائن", text_ar: "اضغط على زبون لرؤية تفاصيل ديونه وتاريخ معاملاته", position: "top" },
+  { target: "#add-customer-btn", title_ar: "إضافة زبون", text_ar: "أضف زبون جديد مع رقم هاتفه", position: "bottom" },
+];
 
 const nf = new Intl.NumberFormat("en-US");
 
@@ -30,6 +38,7 @@ export function CustomersView({
   common,
   sync: syncLabels,
 }: Props) {
+  const tutorial = useTutorial("customers");
   const { online, syncing } = useSync(merchantId);
   const [q, setQ] = useState("");
 
@@ -74,28 +83,33 @@ export function CustomersView({
 
       <div className={styles.titleRow}>
         <p className={styles.subtitle}>{c.subtitle}</p>
-        <Link href="/customers/new" className={styles.addBtn}>
-          <svg
-            className={styles.addIcon}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          {c.add}
-        </Link>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <button type="button" onClick={tutorial.reset} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "3px 8px", fontSize: "0.75rem", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}>
+            ؟
+          </button>
+          <Link href="/customers/new" id="add-customer-btn" className={styles.addBtn}>
+            <svg
+              className={styles.addIcon}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            {c.add}
+          </Link>
+        </div>
       </div>
 
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
 
       {totalDebt > 0 && (
-        <div className={styles.stat}>
+        <div className={styles.stat} id="total-debt">
           <span className={styles.statLabel}>{c.totalDebt}</span>
           <span className={styles.statValue}>
             {nf.format(totalDebt)} {currency}
@@ -139,7 +153,7 @@ export function CustomersView({
           <p className={styles.count}>
             {c.results}: {nf.format(filtered.length)}
           </p>
-          <ul className={styles.list}>
+          <ul className={styles.list} id="customer-list">
             {filtered.map((r) => {
               const debt = Number(r.debt_balance);
               return (
@@ -183,6 +197,13 @@ export function CustomersView({
             })}
           </ul>
         </>
+      )}
+      {tutorial.show && (
+        <TutorialOverlay
+          steps={CUSTOMERS_STEPS}
+          onComplete={tutorial.onComplete}
+          onSkip={tutorial.onSkip}
+        />
       )}
     </main>
   );

@@ -11,6 +11,7 @@ import { PasswordChangeForm } from "./PasswordChangeForm";
 import { LogoUpload } from "./LogoUpload";
 import { CurrenciesSection } from "./CurrenciesSection";
 import { BackupSection } from "./BackupSection";
+import { SettingsTutorial } from "./SettingsTutorial";
 import styles from "@/app/products/product-form.module.css";
 
 export default async function SettingsPage() {
@@ -41,6 +42,7 @@ export default async function SettingsPage() {
 
   return (
     <main className={styles.main}>
+      <SettingsTutorial />
       <div className={styles.topbar}>
         <span className={styles.logo}>{dict.app.name}</span>
         <div className={styles.headerActions}>
@@ -51,7 +53,7 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <div className={styles.card}>
+      <div className={styles.card} id="store-profile">
         <h1 className={styles.title}>{dict.settings.title}</h1>
         <p className={styles.muted}>{dict.settings.subtitle}</p>
         <SettingsForm
@@ -81,7 +83,7 @@ export default async function SettingsPage() {
         <LogoUpload initialUrl={merchant.logo_url} labels={dict.settings.logo} />
       </div>
 
-      <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
+      <div className={styles.card} id="backup-section" style={{ marginBlockStart: "1.25rem" }}>
         <h1 className={styles.title}>{dict.settings.backup.title}</h1>
         <p className={styles.muted}>{dict.settings.backup.subtitle}</p>
         <BackupSection

@@ -130,6 +130,21 @@
 .syncBtn:disabled {
   cursor: default;
 }
+.helpBtn {
+  appearance: none;
+  background: none;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  color: var(--text-muted, #6b7280);
+  cursor: pointer;
+  line-height: 1;
+}
+.helpBtn:hover {
+  background: var(--surface-variant, #f3f4f6);
+}
 .bellBtn {
   position: relative;
   inline-size: 40px;

@@ -86,6 +86,7 @@ export function ProductPicker({
     <div className={styles.picker}>
       <div className={styles.pickerRow}>
         <input
+          id="search-bar"
           className={styles.pickerInput}
           type="search"
           placeholder={labels.search}
@@ -94,6 +95,7 @@ export function ProductPicker({
           onChange={(e) => setQ(e.target.value)}
         />
         <button
+          id="barcode-btn"
           type="button"
           className={styles.pickerScan}
           onClick={() => setScanning(true)}

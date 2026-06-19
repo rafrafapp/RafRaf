@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
+import { useTutorial } from "@/hooks/useTutorial";
+import { TutorialOverlay, type TutorialStep } from "@/components/Tutorial/TutorialOverlay";
 import { getDb, type TxType, type PaymentMethod } from "@/lib/offline/db";
 import { computeReport, presetRange } from "@/lib/reports/compute";
 import { useSync } from "@/lib/offline/useSync";
@@ -78,6 +80,14 @@ type Props = {
   sync: Dictionary["products"]["sync"];
 };
 
+const DASHBOARD_STEPS: TutorialStep[] = [
+  { target: "#stats-sales", title_ar: "مبيعاتك اليوم", text_ar: "هنا تشوف إجمالي مبيعاتك لهاليوم", position: "bottom" },
+  { target: "#cta-new-sale", title_ar: "بيع سريع", text_ar: "اضغط هنا لتسجيل بيع جديد — هاد أكثر شي رح تستخدمه", position: "bottom" },
+  { target: "#alerts-section", title_ar: "تنبيهات المخزون", text_ar: "لما مخزون منتج ينخفض رح يظهر هنا تلقائياً", position: "top" },
+  { target: "#debts-section", title_ar: "ديون غير محصّلة", text_ar: "كل زبون عنده دين رح يظهر هنا مع عدد الأيام", position: "top" },
+  { target: "#bottom-nav", title_ar: "التنقل", text_ar: "استخدم الشريط السفلي للتنقل بين أقسام التطبيق", position: "top" },
+];
+
 export function DashboardView({
   merchantId,
   currency,
@@ -88,6 +98,7 @@ export function DashboardView({
   dashboard: d,
   sync,
 }: Props) {
+  const tutorial = useTutorial("dashboard");
   const tiles = offersMobileCredit ? [...TILES, MOBILE_CREDIT_TILE] : TILES;
   const { online, syncing } = useSync(merchantId);
   const { base } = useCurrencies(merchantId);
@@ -249,6 +260,14 @@ export function DashboardView({
           </span>
         </Link>
         <div className={styles.topActions}>
+          <button
+            type="button"
+            className={styles.helpBtn}
+            onClick={tutorial.reset}
+            aria-label="شرح التطبيق"
+          >
+            ؟
+          </button>
           <Link
             href="/notifications"
             className={styles.bellBtn}
@@ -264,7 +283,7 @@ export function DashboardView({
 
       <main className={styles.main}>
         {/* Stats */}
-        <section className={styles.stats}>
+        <section className={styles.stats} id="stats-sales">
           <div className={styles.stat}>
             <span className={styles.statLabel}>{d.salesToday}</span>
             <span className={styles.statValue}>
@@ -289,13 +308,13 @@ export function DashboardView({
         </section>
 
         {/* Primary CTA */}
-        <Link href="/sell" className={styles.cta}>
+        <Link href="/sell" className={styles.cta} id="cta-new-sale">
           <IconCart size={24} />
           {d.newSaleInvoice}
         </Link>
 
         {/* Alerts */}
-        <section className={styles.card}>
+        <section className={styles.card} id="alerts-section">
           <div className={styles.cardHead}>
             <div className={styles.cardHeadTitle}>
               <h2 className={styles.cardTitle}>{d.stockAlerts}</h2>
@@ -336,7 +355,7 @@ export function DashboardView({
         </section>
 
         {/* Uncollected debts */}
-        <section className={styles.card}>
+        <section className={styles.card} id="debts-section">
           <div className={styles.cardHead}>
             <h2 className={styles.cardTitle}>{d.uncollectedDebts}</h2>
             <Link href="/customers" className={styles.viewAll}>
@@ -397,6 +416,13 @@ export function DashboardView({
 
       </main>
       {/* Bottom nav is rendered globally (components/BottomNav) on every page. */}
+      {tutorial.show && (
+        <TutorialOverlay
+          steps={DASHBOARD_STEPS}
+          onComplete={tutorial.onComplete}
+          onSkip={tutorial.onSkip}
+        />
+      )}
     </div>
   );
 }

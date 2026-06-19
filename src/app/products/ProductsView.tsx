@@ -11,7 +11,16 @@ import { useSync } from "@/lib/offline/useSync";
 import { safeDisplay } from "@/lib/validation/sanitize";
 import { ProductsToolbar } from "./ProductsToolbar";
 import { PageHeader } from "@/components/PageHeader";
+import { useTutorial } from "@/hooks/useTutorial";
+import { TutorialOverlay, type TutorialStep } from "@/components/Tutorial/TutorialOverlay";
 import styles from "./products.module.css";
+
+const PRODUCTS_STEPS: TutorialStep[] = [
+  { target: "#search-products", title_ar: "البحث", text_ar: "ابحث عن أي منتج بالاسم أو الباركود", position: "bottom" },
+  { target: "#product-list", title_ar: "قائمة المنتجات", text_ar: "كل منتجاتك هنا — الأحمر = نفد، البرتقالي = ناقص", position: "top" },
+  { target: "#add-product-btn", title_ar: "إضافة منتج", text_ar: "اضغط هنا لإضافة منتج جديد", position: "top" },
+  { target: "#sync-badge", title_ar: "حالة المزامنة", text_ar: "يظهر هنا إذا البيانات محفوظة أو في انتظار الإنترنت", position: "top" },
+];
 
 const PAGE_SIZE = 20;
 const nf = new Intl.NumberFormat("en-US");
@@ -32,6 +41,7 @@ export function ProductsView({
   products: p,
   common,
 }: Props) {
+  const tutorial = useTutorial("products");
   const sp = useSearchParams();
   const q = sp.get("q") ?? "";
   const category = sp.get("category") ?? "";
@@ -122,6 +132,17 @@ export function ProductsView({
       <div className={styles.content}>
       <div className={styles.titleRow}>
         <p className={styles.subtitle}>{p.subtitle}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span
+            id="sync-badge"
+            style={{ fontSize: "0.75rem", color: online ? (syncing ? "var(--secondary)" : "var(--brand)") : "var(--error)", fontWeight: 600 }}
+          >
+            {!online ? "● غير متصل" : syncing ? "● مزامنة..." : "● محفوظ"}
+          </span>
+          <button type="button" onClick={tutorial.reset} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "3px 8px", fontSize: "0.75rem", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}>
+            ؟
+          </button>
+        </div>
       </div>
 
       {!online && <p className={styles.offlineHint}>{p.sync.offlineHint}</p>}
@@ -162,7 +183,7 @@ export function ProductsView({
       />
 
       {/* Add-product button sits below the search + category filters. */}
-      <Link href="/products/new" className={styles.addBtnFull}>
+      <Link href="/products/new" className={styles.addBtnFull} id="add-product-btn">
         <svg
           className={styles.addIcon}
           viewBox="0 0 24 24"
@@ -194,7 +215,7 @@ export function ProductsView({
             {p.results}: {nf.format(total)}
           </p>
 
-          <ul className={styles.list}>
+          <ul className={styles.list} id="product-list">
             {rows.map((row) => {
               const name =
                 locale === "en" && row.name_en ? row.name_en : row.name;
@@ -292,6 +313,13 @@ export function ProductsView({
         </>
       )}
       </div>
+      {tutorial.show && (
+        <TutorialOverlay
+          steps={PRODUCTS_STEPS}
+          onComplete={tutorial.onComplete}
+          onSkip={tutorial.onSkip}
+        />
+      )}
     </main>
   );
 }

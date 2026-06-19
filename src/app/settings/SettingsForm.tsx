@@ -42,7 +42,7 @@ export function SettingsForm({ initial, settings: s, common, botUsername }: Prop
         </p>
       )}
 
-      <label className={styles.label}>
+      <label className={styles.label} id="telegram-section">
         {s.notifChannel}
         <select
           className={styles.input}

@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
+import { useTutorial } from "@/hooks/useTutorial";
+import { TutorialOverlay, type TutorialStep } from "@/components/Tutorial/TutorialOverlay";
 import { getDb, type LocalProduct, type PaymentMethod } from "@/lib/offline/db";
 import {
   recordSale,
@@ -45,6 +47,14 @@ type Props = {
   };
 };
 
+const SELL_STEPS: TutorialStep[] = [
+  { target: "#search-bar", title_ar: "ابحث عن المنتج", text_ar: "اكتب اسم المنتج أو امسح الباركود", position: "bottom" },
+  { target: "#barcode-btn", title_ar: "مسح الباركود", text_ar: "اضغط لفتح الكاميرا ومسح باركود المنتج", position: "bottom" },
+  { target: "#cart-section", title_ar: "سلة المشتريات", text_ar: "المنتجات اللي اخترتها تظهر هنا — تقدر تعدل الكميات", position: "top" },
+  { target: "#payment-selector", title_ar: "طريقة الدفع", text_ar: "اختر كاش أو دين أو دفع جزئي", position: "top" },
+  { target: "#confirm-sale-btn", title_ar: "إتمام البيع", text_ar: "اضغط هنا لإتمام البيع وتسجيله بالسجل", position: "top" },
+];
+
 function lineTotal(l: CartLine): number {
   return l.qty * l.price * (1 - (l.discount || 0) / 100);
 }
@@ -59,6 +69,7 @@ export function SellView({
   syncLabels,
   scanLabels,
 }: Props) {
+  const tutorial = useTutorial("sell");
   const { online } = useSync(merchantId);
   const { currencies, base } = useCurrencies(merchantId);
   const [currencyCode, setCurrencyCode] = useState<string>("");
@@ -228,6 +239,12 @@ export function SellView({
     <main className={styles.main}>
       <PageHeader title={s.title} backHref="/dashboard" backLabel={common.back} />
 
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBlockEnd: "0.5rem" }}>
+        <button type="button" onClick={tutorial.reset} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px", fontSize: "0.8rem", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}>
+          ؟ شرح التطبيق
+        </button>
+      </div>
+
       {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
 
       <ProductPicker
@@ -247,7 +264,7 @@ export function SellView({
       {cart.length === 0 ? (
         <p className={styles.cartEmpty}>{s.cartEmpty}</p>
       ) : (
-        <div className={styles.cart}>
+        <div className={styles.cart} id="cart-section">
           {cart.map((l, i) => (
             <div key={i} className={styles.cartLine}>
               <div className={styles.cartHead}>
@@ -331,7 +348,7 @@ export function SellView({
               </label>
             )}
 
-            <div className={styles.segment}>
+            <div className={styles.segment} id="payment-selector">
               {PAYMENT_METHODS.map((m) => (
                 <button
                   key={m}
@@ -414,6 +431,7 @@ export function SellView({
               </div>
             )}
             <button
+              id="confirm-sale-btn"
               type="button"
               className={styles.submit}
               onClick={complete}
@@ -502,6 +520,13 @@ export function SellView({
             newSale: s.newSale,
           }}
           onClose={() => setReceipt(null)}
+        />
+      )}
+      {tutorial.show && (
+        <TutorialOverlay
+          steps={SELL_STEPS}
+          onComplete={tutorial.onComplete}
+          onSkip={tutorial.onSkip}
         />
       )}
     </main>
