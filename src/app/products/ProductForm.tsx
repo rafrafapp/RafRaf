@@ -393,35 +393,6 @@ export function ProductForm({
       </label>
 
       <label className={styles.label}>
-        {products.fields.barcode}{" "}
-        <span className={styles.muted}>({common.optional})</span>
-        <span className={styles.barcodeRow}>
-          <input
-            className={styles.input}
-            name="barcode"
-            maxLength={120}
-            dir="ltr"
-            value={barcode}
-            onChange={(e) => setBarcode(e.target.value)}
-          />
-          <button
-            type="button"
-            className={styles.scanBtn}
-            onClick={() => setScanning(true)}
-          >
-            {products.scan}
-          </button>
-          <button
-            type="button"
-            className={styles.genBtn}
-            onClick={() => setBarcode(generateBarcode())}
-          >
-            {products.generate}
-          </button>
-        </span>
-      </label>
-
-      <label className={styles.label}>
         {products.fields.category}{" "}
         <span className={styles.muted}>({common.optional})</span>
         <input
@@ -491,6 +462,35 @@ export function ProductForm({
           </select>
         </label>
       </div>
+
+      <label className={styles.label}>
+        {products.fields.barcode}{" "}
+        <span className={styles.muted}>({common.optional})</span>
+        <span className={styles.barcodeRow}>
+          <input
+            className={styles.input}
+            name="barcode"
+            maxLength={120}
+            dir="ltr"
+            value={barcode}
+            onChange={(e) => setBarcode(e.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.scanBtn}
+            onClick={() => setScanning(true)}
+          >
+            {products.scan}
+          </button>
+          <button
+            type="button"
+            className={styles.genBtn}
+            onClick={() => setBarcode(generateBarcode())}
+          >
+            {products.generate}
+          </button>
+        </span>
+      </label>
 
       <label className={styles.label}>
         {products.fields.minStock}
