@@ -328,6 +328,35 @@ export function QuickAddForm({
         </label>
       </div>
 
+      {/* Barcode + scan — always visible (main section, not the optional drawer) */}
+      <label className={styles.label}>
+        {products.fields.barcode}{" "}
+        <span className={styles.muted}>({common.optional})</span>
+        <span className={styles.barcodeRow}>
+          <input
+            className={styles.input}
+            dir="ltr"
+            maxLength={120}
+            value={barcode}
+            onChange={(e) => setBarcode(e.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.scanBtn}
+            onClick={() => setScanning(true)}
+          >
+            {products.scan}
+          </button>
+          <button
+            type="button"
+            className={styles.genBtn}
+            onClick={() => setBarcode(generateBarcode())}
+          >
+            {products.generate}
+          </button>
+        </span>
+      </label>
+
       {/* Unit */}
       <label className={styles.label}>
         {products.fields.unit}
@@ -418,35 +447,6 @@ export function QuickAddForm({
               )}
             </div>
           </div>
-
-          {/* Barcode + scan */}
-          <label className={styles.label}>
-            {products.fields.barcode}{" "}
-            <span className={styles.muted}>({common.optional})</span>
-            <span className={styles.barcodeRow}>
-              <input
-                className={styles.input}
-                dir="ltr"
-                maxLength={120}
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-              />
-              <button
-                type="button"
-                className={styles.scanBtn}
-                onClick={() => setScanning(true)}
-              >
-                {products.scan}
-              </button>
-              <button
-                type="button"
-                className={styles.genBtn}
-                onClick={() => setBarcode(generateBarcode())}
-              >
-                {products.generate}
-              </button>
-            </span>
-          </label>
 
           {/* Image */}
           <div className={styles.label}>
