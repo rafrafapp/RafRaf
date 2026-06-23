@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isTelegramConfigured, sendTelegram } from "./telegram";
 import { notifyMerchant } from "./dispatch";
-import { debtReminderMessage, oversellMessage } from "./messages";
+import { debtReminderMessage, newProductFromBarcodeMessage, oversellMessage } from "./messages";
 import { sanitizeText } from "@/lib/validation/sanitize";
 
 export type ReminderResult = { ok: true } | { error: string };
@@ -41,6 +41,27 @@ export async function notifyOversell(
   } catch {
     return { ok: false };
   }
+}
+
+// Notify the merchant on Telegram when a new product was created from a scanned
+// barcode that wasn't in their catalogue. Best-effort; no-op if not configured.
+export async function notifyNewProduct(barcode: string): Promise<void> {
+  try {
+    if (!isTelegramConfigured()) return;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: m } = await supabase
+      .from("merchants")
+      .select("store_name,notify_channel,telegram_chat_id")
+      .eq("id", user.id)
+      .single();
+    if (!m) return;
+    await notifyMerchant(m, newProductFromBarcodeMessage({
+      storeName: m.store_name ?? "RafRaf",
+      barcode: sanitizeText(String(barcode)).slice(0, 80),
+    }));
+  } catch { /* best-effort */ }
 }
 
 // Owner-triggered debt reminder to a CUSTOMER, sent over Telegram. The customer

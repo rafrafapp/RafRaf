@@ -148,23 +148,35 @@ export function DashboardView({
 
   const money = (n: number) => `${nf.format(Math.round(n))} ${baseSym}`;
 
-  // Alerts = low-stock items + outstanding debtors (matches the design's mix of
-  // "out of stock" + "late invoice"). Full list lives on /notifications.
+  // Products with auto-generated names from barcode scan (need data completion).
+  const incompleteCount = useMemo(
+    () => (products ?? []).filter((pr) => pr.name.startsWith("منتج-")).length,
+    [products],
+  );
+
+  // Alerts = incomplete products + low-stock items + outstanding debtors.
   const alerts = useMemo(() => {
-    const stock = report.lowStock.map((p) => ({
+    type Alert = { key: string; name: string; meta: string; href: string };
+    const incomplete: Alert[] = incompleteCount > 0 ? [{
+      key: "incomplete",
+      name: `${incompleteCount}`,
+      meta: (d as Record<string, unknown>).incompleteProducts as string ?? "منتجات بحاجة لإكمال البيانات",
+      href: "/products?incomplete=true",
+    }] : [];
+    const stock: Alert[] = report.lowStock.map((p) => ({
       key: `s-${p.id}`,
       name: p.name,
       meta: p.stock <= 0 ? d.notifications.outOfStock : d.notifications.lowStockItem,
       href: `/products/${p.id}/edit`,
     }));
-    const debts = report.topDebtors.map((c) => ({
+    const debts: Alert[] = report.topDebtors.map((c) => ({
       key: `d-${c.id}`,
       name: c.name,
       meta: d.notifications.lateInvoice,
       href: `/customers/${c.id}`,
     }));
-    return [...stock, ...debts];
-  }, [report.lowStock, report.topDebtors, d.notifications]);
+    return [...incomplete, ...stock, ...debts];
+  }, [incompleteCount, report.lowStock, report.topDebtors, d]);
 
   const debtors = report.topDebtors.slice(0, 3);
 

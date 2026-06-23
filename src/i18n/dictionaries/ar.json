@@ -150,6 +150,7 @@
     "newInvoice": "إضافة فاتورة جديدة",
     "noActivity": "لا يوجد نشاط بعد",
     "noAlerts": "المخزون بحالة جيدة ✓",
+    "incompleteProducts": "منتجات بحاجة لإكمال البيانات",
     "noDebtors": "لا توجد ديون مستحقة ✓",
     "manualSync": "مزامنة",
     "newSaleInvoice": "فاتورة بيع جديدة",
@@ -351,6 +352,15 @@
       "conflictsHint": "عُدّلت بعض المنتجات من جهاز آخر وتمت تسويتها تلقائياً (الأحدث يفوز). راجِعها.",
       "dismiss": "إخفاء",
       "retry": "إعادة المحاولة"
+    },
+    "incomplete": {
+      "tab": "ناقص معلومات",
+      "allTab": "الكل",
+      "namePlaceholder": "أدخل اسم المنتج",
+      "save": "حفظ",
+      "saving": "...",
+      "saved": "تم",
+      "badge": "ناقص"
     }
   },
   "transactions": {
@@ -431,7 +441,21 @@
       "walkIn": "زبون نقدي (بدون حساب)",
       "paidNow": "المدفوع الآن",
       "remaining": "المتبقّي (دين)",
-      "creditNoCustomer": "اختر عميلاً لتسجيل الدين عليه."
+      "creditNoCustomer": "اختر عميلاً لتسجيل الدين عليه.",
+      "scanEmpty": "امسح باركود أو ابحث عن منتج",
+      "addedToCart": "أضيف للسلة",
+      "cartItems": "منتج في السلة",
+      "confirmSale": "إتمام البيع",
+      "unknownBarcode": {
+        "title": "منتج جديد",
+        "hint": "الباركود غير موجود. أكمل البيانات الأساسية:",
+        "barcodeLabel": "الباركود",
+        "priceLabel": "سعر البيع *",
+        "qtyLabel": "الكمية",
+        "save": "حفظ وإضافة للسلة",
+        "saving": "جاري الحفظ...",
+        "cancel": "إلغاء"
+      }
     },
     "party": {
       "add": "إضافة «{q}»",

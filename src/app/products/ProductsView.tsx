@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb, type LocalProduct } from "@/lib/offline/db";
+import { saveProduct } from "@/lib/offline/products-repo";
+import { syncAll } from "@/lib/offline/sync";
 import { useSync } from "@/lib/offline/useSync";
 import { safeDisplay } from "@/lib/validation/sanitize";
 import { ProductsToolbar } from "./ProductsToolbar";
@@ -14,6 +16,102 @@ import { PageHeader } from "@/components/PageHeader";
 import { useTutorial } from "@/hooks/useTutorial";
 import { TutorialOverlay, type TutorialStep } from "@/components/Tutorial/TutorialOverlay";
 import styles from "./products.module.css";
+
+// Inline name editor for "ناقص معلومات" products (auto-generated name "منتج-[barcode]")
+function IncompleteRow({
+  row,
+  merchantId,
+  labels,
+  currency,
+}: {
+  row: LocalProduct;
+  merchantId: string;
+  labels: Dictionary["products"]["incomplete"];
+  currency: string;
+}) {
+  const [name, setName] = useState(row.name);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const nfLocal = new Intl.NumberFormat("en-US");
+
+  async function handleSave() {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    try {
+      await saveProduct({
+        mode: "edit",
+        merchantId,
+        base: row,
+        data: {
+          name: name.trim(),
+          name_en: row.name_en ?? undefined,
+          barcode: row.barcode ?? undefined,
+          category: row.category ?? undefined,
+          cost_price: Number(row.cost_price),
+          sell_price: Number(row.sell_price),
+          stock: Number(row.stock),
+          min_stock: Number(row.min_stock),
+          unit: (row.unit as "meter" | "piece" | "kg" | "liter" | "box" | "carton" | "dozen" | undefined) ?? undefined,
+          notes: row.notes ?? undefined,
+          custom_fields: row.custom_fields,
+        },
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{
+      background: "#fff",
+      border: "1px solid #e2e8f0",
+      borderRadius: "0.75rem",
+      padding: "0.75rem 1rem",
+      display: "flex",
+      flexDirection: "column",
+      gap: "0.5rem",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.78rem", color: "#444651" }}>
+        {row.barcode && <span style={{ fontFamily: "monospace", background: "#f2f3ff", padding: "1px 6px", borderRadius: "4px" }}>{safeDisplay(row.barcode)}</span>}
+        <span>{nfLocal.format(Number(row.sell_price))} {currency}</span>
+        <span>مخزون: {nfLocal.format(Number(row.stock))}</span>
+      </div>
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <input
+          style={{
+            flex: 1, font: "inherit", fontSize: "0.95rem", fontWeight: 600,
+            color: "#131b2e", background: "#faf8ff",
+            border: "1.5px solid #c5c5d3", borderRadius: "0.5rem",
+            padding: "0.5rem 0.7rem",
+          }}
+          value={name}
+          onChange={(e) => { setName(e.target.value); setSaved(false); }}
+          placeholder={labels.namePlaceholder}
+          onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); }}
+        />
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={saving || !name.trim()}
+          style={{
+            appearance: "none", border: "none",
+            background: saved ? "#16a34a" : "#1e3a8a",
+            color: "#fff", font: "inherit", fontWeight: 700,
+            fontSize: "0.85rem", padding: "0.5rem 0.9rem",
+            borderRadius: "0.5rem", cursor: "pointer",
+            opacity: saving || !name.trim() ? 0.6 : 1,
+            whiteSpace: "nowrap", minWidth: "56px",
+            transition: "background 0.2s",
+          }}
+        >
+          {saving ? labels.saving : saved ? labels.saved : labels.save}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const PRODUCTS_STEPS: TutorialStep[] = [
   { target: "#search-products", title_ar: "البحث", text_ar: "ابحث عن أي منتج بالاسم أو الباركود", position: "bottom" },
@@ -46,6 +144,7 @@ export function ProductsView({
   const q = sp.get("q") ?? "";
   const category = sp.get("category") ?? "";
   const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1);
+  const incompleteMode = sp.get("incomplete") === "true";
 
   const { online, syncing } = useSync(merchantId);
 
@@ -86,6 +185,12 @@ export function ProductsView({
   // sync when there's nothing cached yet — avoids a false "no products" flash.
   const loading = all === undefined || (syncing && rowsAll.length === 0);
 
+  // Products with auto-generated name (barcode scan created them): name starts with "منتج-"
+  const incompleteProducts = useMemo(
+    () => rowsAll.filter((r) => r.name.startsWith("منتج-")),
+    [rowsAll],
+  );
+
   const categories = useMemo(() => {
     const set = new Set<string>();
     for (const r of rowsAll) if (r.category) set.add(r.category);
@@ -93,6 +198,7 @@ export function ProductsView({
   }, [rowsAll]);
 
   const filtered = useMemo(() => {
+    if (incompleteMode) return incompleteProducts;
     let list = rowsAll;
     if (category) list = list.filter((r) => r.category === category);
     if (q) {
@@ -145,6 +251,36 @@ export function ProductsView({
         </div>
       </div>
 
+      {/* "ناقص معلومات" / "الكل" filter tabs */}
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <Link
+          href="/products"
+          className={styles.chip}
+          style={!incompleteMode ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" } : {}}
+        >
+          {p.incomplete.allTab}
+        </Link>
+        <Link
+          href="/products?incomplete=true"
+          className={styles.chip}
+          style={incompleteMode ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" } : {}}
+        >
+          {p.incomplete.tab}
+          {incompleteProducts.length > 0 && (
+            <span style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              background: incompleteMode ? "#fff" : "var(--error)",
+              color: incompleteMode ? "var(--brand)" : "#fff",
+              borderRadius: "999px", fontSize: "0.65rem", fontWeight: 700,
+              minWidth: "16px", height: "16px", padding: "0 4px",
+              marginInlineStart: "4px",
+            }}>
+              {incompleteProducts.length}
+            </span>
+          )}
+        </Link>
+      </div>
+
       {!online && <p className={styles.offlineHint}>{p.sync.offlineHint}</p>}
 
       {conflicts.length > 0 && (
@@ -165,43 +301,67 @@ export function ProductsView({
         </div>
       )}
 
-      <ProductsToolbar
-        categories={categories}
-        labels={{
-          search: p.search,
-          filterCategory: p.filterCategory,
-          allCategories: p.allCategories,
-          scan: p.scan,
-        }}
-        scanLabels={{
-          title: p.scanTitle,
-          hint: p.scanHint,
-          error: p.scanError,
-          close: p.scanClose,
-          upload: p.scanUpload,
-        }}
-      />
+      {/* Toolbar + add button — hidden in incomplete mode */}
+      {!incompleteMode && (
+        <>
+          <ProductsToolbar
+            categories={categories}
+            labels={{
+              search: p.search,
+              filterCategory: p.filterCategory,
+              allCategories: p.allCategories,
+              scan: p.scan,
+            }}
+            scanLabels={{
+              title: p.scanTitle,
+              hint: p.scanHint,
+              error: p.scanError,
+              close: p.scanClose,
+              upload: p.scanUpload,
+            }}
+          />
 
-      {/* Add-product button sits below the search + category filters. */}
-      <Link href="/products/new" className={styles.addBtnFull} id="add-product-btn">
-        <svg
-          className={styles.addIcon}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        {p.add}
-      </Link>
+          <Link href="/products/new" className={styles.addBtnFull} id="add-product-btn">
+            <svg
+              className={styles.addIcon}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            {p.add}
+          </Link>
+        </>
+      )}
 
       {loading ? (
         <p className={styles.count}>{common.loading}</p>
+      ) : incompleteMode ? (
+        /* ── Incomplete products: inline name edit ── */
+        incompleteProducts.length === 0 ? (
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>{p.empty}</p>
+          </div>
+        ) : (
+          <ul className={styles.list} id="product-list">
+            {incompleteProducts.map((row) => (
+              <li key={row.id}>
+                <IncompleteRow
+                  row={row}
+                  merchantId={merchantId}
+                  labels={p.incomplete}
+                  currency={currency}
+                />
+              </li>
+            ))}
+          </ul>
+        )
       ) : total === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>

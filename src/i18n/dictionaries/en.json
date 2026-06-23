@@ -150,6 +150,7 @@
     "newInvoice": "Add a new invoice",
     "noActivity": "No activity yet",
     "noAlerts": "Stock looks healthy ✓",
+    "incompleteProducts": "Products need data completion",
     "noDebtors": "No outstanding debts ✓",
     "manualSync": "Sync",
     "newSaleInvoice": "New sale invoice",
@@ -351,6 +352,15 @@
       "conflictsHint": "Some products were edited on another device and were auto-resolved (newest wins). Review them.",
       "dismiss": "Dismiss",
       "retry": "Retry"
+    },
+    "incomplete": {
+      "tab": "Incomplete",
+      "allTab": "All",
+      "namePlaceholder": "Enter product name",
+      "save": "Save",
+      "saving": "...",
+      "saved": "Saved",
+      "badge": "Incomplete"
     }
   },
   "transactions": {
@@ -431,7 +441,21 @@
       "walkIn": "Walk-in (no account)",
       "paidNow": "Paid now",
       "remaining": "Remaining (debt)",
-      "creditNoCustomer": "Pick a customer to put this on credit."
+      "creditNoCustomer": "Pick a customer to put this on credit.",
+      "scanEmpty": "Scan a barcode or search for a product",
+      "addedToCart": "Added to cart",
+      "cartItems": "item(s) in cart",
+      "confirmSale": "Complete Sale",
+      "unknownBarcode": {
+        "title": "New Product",
+        "hint": "Barcode not found. Fill in the basics:",
+        "barcodeLabel": "Barcode",
+        "priceLabel": "Selling Price *",
+        "qtyLabel": "Quantity",
+        "save": "Save & Add to Cart",
+        "saving": "Saving...",
+        "cancel": "Cancel"
+      }
     },
     "party": {
       "add": "Add “{q}”",

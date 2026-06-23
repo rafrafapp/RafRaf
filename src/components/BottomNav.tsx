@@ -28,6 +28,7 @@ const HIDDEN_EXACT = new Set([
   "/developers",
   "/terms",
   "/privacy",
+  "/sell",
 ]);
 const HIDDEN_PREFIX = ["/auth", "/rafraf-admin"];
 

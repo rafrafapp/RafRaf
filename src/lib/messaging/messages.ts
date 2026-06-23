@@ -77,6 +77,13 @@ export function backupDailySummaryMessage(o: {
   return lines.join("\n");
 }
 
+export function newProductFromBarcodeMessage(o: {
+  storeName: string;
+  barcode: string;
+}): string {
+  return `📦 ${o.storeName}\nتم إضافة منتج جديد بالباركود: ${o.barcode}\nالاسم المؤقت: «منتج-${o.barcode}»\nأكمل بياناته من إدارة المنتجات.`;
+}
+
 // Owner-triggered "please back me up" request sent to the admin's Telegram.
 export function backupRequestMessage(o: {
   storeName: string;
