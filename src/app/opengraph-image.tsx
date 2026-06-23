@@ -7,6 +7,7 @@ import { ImageResponse } from "next/og";
 export const alt = "رف رف · RafRaf — The digital shelf for every merchant";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+export const dynamic = "force-dynamic";
 
 // IBM Plex Sans Arabic (Bold) covers BOTH Arabic and Latin, so the whole card can
 // use it. Satori needs an embedded font for Arabic glyphs; we fetch it at render
