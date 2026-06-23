@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
-import { useTutorial } from "@/hooks/useTutorial";
-import { TutorialOverlay, type TutorialStep } from "@/components/Tutorial/TutorialOverlay";
 import { getDb, type LocalProduct, type PaymentMethod } from "@/lib/offline/db";
 import {
   recordSale,
@@ -18,15 +17,15 @@ import { saveProduct } from "@/lib/offline/products-repo";
 import { syncAll } from "@/lib/offline/sync";
 import { useSync } from "@/lib/offline/useSync";
 import { PAYMENT_METHODS } from "@/lib/validation/transaction";
-import { fromBase, toBase } from "@/lib/validation/currency";
-import { useCurrencies, rateFor } from "@/lib/offline/useCurrencies";
-import { CurrencySelect } from "@/components/CurrencySelect";
 import { PartyPicker, type Party } from "@/components/PartyPicker";
 import { Receipt, type ReceiptLine } from "@/components/Receipt";
 import { Spinner } from "@/components/Spinner";
-import { BackButton } from "@/components/BackButton";
 import { safeDisplay } from "@/lib/validation/sanitize";
-import { notifyOversell, notifyNewProductsBatch } from "@/lib/messaging/actions";
+import {
+  notifyOversell,
+  notifyNewProductsBatch,
+  notifySale,
+} from "@/lib/messaging/actions";
 import styles from "./sell.module.css";
 
 const BarcodeScanner = dynamic(
@@ -55,15 +54,8 @@ type Props = {
   };
 };
 
-const SELL_STEPS: TutorialStep[] = [
-  { target: "#search-bar", title_ar: "ابحث عن المنتج", text_ar: "اكتب اسم المنتج أو امسح الباركود", position: "bottom" },
-  { target: "#barcode-btn", title_ar: "مسح الباركود", text_ar: "الكاميرا تبقى مفتوحة — امسح منتجات متعددة بدون توقف", position: "bottom" },
-  { target: "#cart-section", title_ar: "سلة المشتريات", text_ar: "المنتجات المضافة تظهر هنا — اسحب لليسار لحذف", position: "top" },
-  { target: "#confirm-sale-btn", title_ar: "إتمام البيع", text_ar: "اضغط هنا لعرض ملخص البيع وتأكيد الدفع", position: "top" },
-];
-
 function lineTotal(l: CartLine): number {
-  return l.qty * l.price * (1 - (l.discount || 0) / 100);
+  return round2(l.qty * l.price * (1 - (l.discount || 0) / 100));
 }
 
 export function SellView({
@@ -76,41 +68,38 @@ export function SellView({
   syncLabels,
   scanLabels,
 }: Props) {
-  const tutorial = useTutorial("sell");
   const { online } = useSync(merchantId);
-  const { currencies, base } = useCurrencies(merchantId);
-  const [currencyCode, setCurrencyCode] = useState<string>("");
-  const selected = currencies.find((c) => c.code === currencyCode) ?? base ?? null;
-  const code = selected?.code ?? "SYP";
-  const rate = selected ? Number(selected.rate_to_base) || 1 : 1;
-  const symbol = selected?.symbol ?? "ل.س";
-  const baseSymbol = base?.symbol ?? "ل.س";
-  const isBase = !selected || selected.is_base;
+  const s = tx.sell;
+  const payments = tx.payments as Record<string, string>;
+  const ub = (s as Record<string, unknown>).unknownBarcode as Record<string, string> | undefined;
 
-  // Search + scan
-  const [q, setQ] = useState("");
-  const [scanning, setScanning] = useState(false);
-
-  // Cart
+  // ── Cart ──
   const [cart, setCart] = useState<CartLine[]>([]);
 
-  // UI
+  // ── Scanner ──
+  const [scanning, setScanning] = useState(false);
+  const [scanAfterSheet, setScanAfterSheet] = useState(false);
+
+  // ── Search ──
+  const [q, setQ] = useState("");
+
+  // ── UI feedback ──
   const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [removingIdx, setRemovingIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const busyRef = useRef(false);
 
-  // Unknown barcode sheet
+  // ── Unknown barcode sheet ──
   const [unknownBarcode, setUnknownBarcode] = useState<string | null>(null);
   const [newPrice, setNewPrice] = useState("");
   const [newQty, setNewQty] = useState("1");
   const [savingNew, setSavingNew] = useState(false);
-  const [scanAfterSheet, setScanAfterSheet] = useState(false);
 
-  // Track barcodes added this session for batch notification
+  // ── New barcodes batch (Telegram at end of sale) ──
   const [newBarcodeProducts, setNewBarcodeProducts] = useState<string[]>([]);
 
-  // Summary sheet state
+  // ── Summary sheet ──
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryPayment, setSummaryPayment] = useState<PaymentMethod>("cash");
   const [summaryCustomer, setSummaryCustomer] = useState<Party | null>(null);
@@ -118,60 +107,70 @@ export function SellView({
   const [summaryNote, setSummaryNote] = useState("");
   const [summaryDiscount, setSummaryDiscount] = useState("");
 
-  // Oversell dialog
-  const [overdraw, setOverdraw] = useState<{ name: string; available: number; required: number } | null>(null);
+  // ── Oversell dialog ──
+  const [overdraw, setOverdraw] = useState<{
+    name: string;
+    available: number;
+    required: number;
+  } | null>(null);
 
-  // Success flash + receipt
+  // ── Receipt + success ──
   const [successFlash, setSuccessFlash] = useState(false);
   const [receipt, setReceipt] = useState<{
     lines: ReceiptLine[];
     total: number;
     date: string;
     invoiceNo: string;
-    currencySymbol: string;
-    sypTotal: number | null;
   } | null>(null);
 
-  // Swipe tracking
+  // ── Swipe tracking ──
   const touchStartX = useRef<number | null>(null);
 
-  const s = tx.sell;
-  const ub = (s as Record<string, unknown>).unknownBarcode as Record<string, string> | undefined;
-  const payments = tx.payments as Record<string, string>;
-
-  // All products from IndexedDB
+  // ── All products from IndexedDB ──
   const all = useLiveQuery(
-    () => getDb().products.where("[merchant_id+_deleted]").equals([merchantId, 0]).toArray(),
+    () =>
+      getDb()
+        .products.where("[merchant_id+_deleted]")
+        .equals([merchantId, 0])
+        .toArray(),
     [merchantId],
   );
-  const products = all ?? [];
+  const products = useMemo(
+    () =>
+      (all ?? []).sort((a, b) => a.name.localeCompare(b.name, "ar")),
+    [all],
+  );
 
-  // Search results
-  const results = useMemo(() => {
+  const filteredProducts = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return [];
-    return products
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(needle) ||
-          (p.name_en?.toLowerCase().includes(needle) ?? false) ||
-          (p.barcode?.toLowerCase().includes(needle) ?? false),
-      )
-      .sort((a, b) => a.name.localeCompare(b.name, "ar"))
-      .slice(0, 30);
+    if (!needle) return products;
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(needle) ||
+        (p.name_en?.toLowerCase().includes(needle) ?? false) ||
+        (p.barcode?.toLowerCase().includes(needle) ?? false),
+    );
   }, [products, q]);
 
   const cartTotal = useMemo(
     () => cart.reduce((sum, l) => sum + lineTotal(l), 0),
     [cart],
   );
-
   const discountPct = parseFloat(summaryDiscount) || 0;
-  const discountedTotal = discountPct > 0 ? cartTotal * (1 - discountPct / 100) : cartTotal;
+  const discountedTotal = discountPct > 0
+    ? round2(cartTotal * (1 - discountPct / 100))
+    : cartTotal;
 
+  const cartProductIds = useMemo(
+    () => new Set(cart.map((l) => l.product_id)),
+    [cart],
+  );
+
+  // ── Helpers ──
   function showToast(msg: string) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast(msg);
-    setTimeout(() => setToast(null), 1800);
+    toastTimer.current = setTimeout(() => setToast(null), 1500);
   }
 
   function doAdd(p: LocalProduct) {
@@ -188,29 +187,12 @@ export function SellView({
           product_id: p.id,
           product_name: p.name,
           qty: 1,
-          price: round2(fromBase(Number(p.sell_price), rate)),
+          price: round2(Number(p.sell_price)),
           discount: 0,
         },
       ];
     });
-    setQ("");
-    // Show toast above scanner overlay
-    const newQtyInCart = cart.find((l) => l.product_id === p.id)?.qty;
-    const qtyMsg = newQtyInCart ? `${newQtyInCart + 1}` : "1";
-    showToast(`✅ ${safeDisplay(p.name)} — ${s.qty}: ${qtyMsg}`);
-  }
-
-  function changeCurrency(newCode: string) {
-    const oldRate = rate;
-    const newRate = rateFor(currencies, newCode);
-    setCart((prev) =>
-      prev.map((l) => ({
-        ...l,
-        price: round2(fromBase(toBase(l.price, oldRate), newRate)),
-      })),
-    );
-    setSummaryPaid("");
-    setCurrencyCode(newCode);
+    showToast(`✅ ${safeDisplay(p.name)}`);
   }
 
   function updateQty(index: number, qty: number) {
@@ -226,7 +208,7 @@ export function SellView({
     setTimeout(() => {
       setCart((prev) => prev.filter((_, i) => i !== index));
       setRemovingIdx(null);
-    }, 200);
+    }, 220);
   }
 
   function onTouchStart(e: React.TouchEvent) {
@@ -237,17 +219,16 @@ export function SellView({
     if (touchStartX.current === null) return;
     const delta = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
-    if (delta < -80) removeLineAnimated(index);
+    if (delta < -75) removeLineAnimated(index);
   }
 
-  // Scanner detection — continuous: camera stays open for known products
+  // ── Scanner ──
   function onDetected(code: string) {
     const exact = products.find((p) => p.barcode === code);
     if (exact) {
       doAdd(exact);
-      // scanner stays open (continuous mode — don't setScanning(false))
+      // scanner stays open (continuous mode)
     } else {
-      // Pause scanner for unknown barcode sheet
       setScanning(false);
       setScanAfterSheet(true);
       setUnknownBarcode(code);
@@ -260,7 +241,7 @@ export function SellView({
     setUnknownBarcode(null);
     if (scanAfterSheet) {
       setScanAfterSheet(false);
-      setScanning(true); // reopen scanner
+      setScanning(true);
     }
   }
 
@@ -314,12 +295,11 @@ export function SellView({
         _base_updated_at: null,
       };
       doAdd(newProduct);
-      // Track for batch notification at end of sale (not individually)
       setNewBarcodeProducts((prev) => [...prev, unknownBarcode]);
       setUnknownBarcode(null);
       if (scanAfterSheet) {
         setScanAfterSheet(false);
-        setScanning(true); // reopen scanner
+        setScanning(true);
       }
       void syncAll(merchantId).catch(() => {});
     } finally {
@@ -327,13 +307,12 @@ export function SellView({
     }
   }
 
-  // Open summary sheet
+  // ── Sale flow ──
   function openSummary() {
     if (cart.length === 0 || saving) return;
     setSummaryOpen(true);
   }
 
-  // Validate + oversell check, then doComplete
   async function proceedFromSummary() {
     if (busyRef.current) return;
     if (summaryPayment !== "cash" && !summaryCustomer) {
@@ -345,8 +324,12 @@ export function SellView({
       if (!l.product_id) continue;
       const p = await db.products.get(l.product_id);
       if (p && l.qty > Number(p.stock)) {
-        setOverdraw({ name: l.product_name, available: Number(p.stock), required: l.qty });
-        return; // oversell dialog shows on top of summary
+        setOverdraw({
+          name: l.product_name,
+          available: Number(p.stock),
+          required: l.qty,
+        });
+        return;
       }
     }
     await doComplete();
@@ -355,16 +338,10 @@ export function SellView({
   async function doComplete() {
     if (busyRef.current) return;
     busyRef.current = true;
-    const oversold = overdraw;
+    const oversoldItem = overdraw;
     setOverdraw(null);
+    setSummaryOpen(false);
     setSaving(true);
-
-    // Capture currency state at call time
-    const txCode = code;
-    const txRate = rate;
-    const txSymbol = symbol;
-    const txIsBase = isBase;
-
     try {
       const pct = parseFloat(summaryDiscount) || 0;
       const saleLines: CartLine[] = pct > 0
@@ -373,8 +350,8 @@ export function SellView({
 
       const group = await recordSale({
         merchantId,
-        currency: txCode,
-        exchangeRate: txRate,
+        currency,
+        exchangeRate: 1,
         payment: summaryPayment,
         note: summaryNote.trim() || null,
         lines: saleLines,
@@ -388,234 +365,292 @@ export function SellView({
         price: l.price,
         total: lineTotal(l),
       }));
+
       const allTx = await getDb()
         .transactions.where("merchant_id")
         .equals(merchantId)
         .toArray();
       const invoiceNo = formatInvoiceNo(buildInvoiceNumbers(allTx).get(group));
-      const recTotal = lines.reduce((sum, l) => sum + l.total, 0);
-      const recData = {
-        lines,
-        total: recTotal,
-        date: new Date().toISOString(),
-        invoiceNo,
-        currencySymbol: txSymbol,
-        sypTotal: txIsBase ? null : recTotal * txRate,
-      };
+      const total = lines.reduce((sum, l) => sum + l.total, 0);
 
-      // Close summary + reset state
-      setSummaryOpen(false);
+      // Reset cart + summary state
+      const barcodes = [...newBarcodeProducts];
       setCart([]);
+      setNewBarcodeProducts([]);
       setSummaryPayment("cash");
       setSummaryCustomer(null);
       setSummaryPaid("");
       setSummaryNote("");
       setSummaryDiscount("");
 
-      // Side effects: notifications + sync
-      if (oversold) {
-        void notifyOversell(oversold.name, oversold.available, oversold.required).catch(() => {});
-      }
-      if (newBarcodeProducts.length > 0) {
-        const barcodes = [...newBarcodeProducts];
-        setNewBarcodeProducts([]);
+      // Fire-and-forget notifications + sync
+      void notifySale({
+        invoiceNo,
+        total,
+        currency,
+        payment: summaryPayment,
+      }).catch(() => {});
+      if (barcodes.length > 0) {
         void notifyNewProductsBatch(barcodes).catch(() => {});
+      }
+      if (oversoldItem) {
+        void notifyOversell(
+          oversoldItem.name,
+          oversoldItem.available,
+          oversoldItem.required,
+        ).catch(() => {});
       }
       void syncAll(merchantId).catch(() => {});
 
-      // Brief success flash, then show receipt
+      // Success flash → receipt
       setSuccessFlash(true);
       setTimeout(() => {
         setSuccessFlash(false);
-        setReceipt(recData);
-      }, 1200);
+        setReceipt({ lines, total, date: new Date().toISOString(), invoiceNo });
+      }, 2000);
     } catch {
-      showToast(s.completing + " — خطأ");
+      showToast("حدث خطأ أثناء الحفظ");
     } finally {
       setSaving(false);
       busyRef.current = false;
     }
   }
 
+  // ── Render ──
   return (
-    <div className={styles.page}>
-      {/* Toast — visible above scanner overlay (z-index 600) */}
-      {toast && <div className={styles.toast} role="status">{toast}</div>}
-
-      {/* ── Success flash ── */}
-      {successFlash && (
-        <div className={styles.successFlash}>
-          <span className={styles.successIcon}>✅</span>
-          <h2 className={styles.successTitle}>{(s as Record<string, unknown>).successTitle as string ?? "تم البيع ✅"}</h2>
-          <p className={styles.successSub}>{(s as Record<string, unknown>).successSubtitle as string ?? "سُجّل بنجاح"}</p>
+    <div className={styles.page} dir="rtl">
+      {/* Toast */}
+      {toast && (
+        <div className={styles.toast} role="status" aria-live="polite">
+          {toast}
         </div>
       )}
 
-      {/* ── Sticky top: header + search ── */}
-      <div className={styles.stickyTop}>
-        <div className={styles.topHeader}>
-          <BackButton label={common.back} fallback="/dashboard" />
-          <h1 className={styles.topTitle}>{s.title}</h1>
-          <button type="button" className={styles.helpBtn} onClick={tutorial.reset} aria-label="شرح التطبيق">
-            ؟
-          </button>
+      {/* Success flash */}
+      {successFlash && (
+        <div className={styles.successFlash}>
+          <span className={styles.successIcon}>✅</span>
+          <h2 className={styles.successTitle}>
+            {(s as Record<string, unknown>).successTitle as string ?? "تم البيع ✅"}
+          </h2>
+          <p className={styles.successSub}>
+            {(s as Record<string, unknown>).successSubtitle as string ?? "سُجّل بنجاح"}
+          </p>
         </div>
-        <div className={styles.searchRow}>
-          <input
-            id="search-bar"
-            className={styles.searchInput}
-            type="search"
-            inputMode="search"
-            placeholder={s.searchProduct}
-            aria-label={s.searchProduct}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <button
-            id="barcode-btn"
-            type="button"
-            className={styles.scanBtn}
-            onClick={() => setScanning(true)}
-            aria-label={s.scan}
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M3 9V5a2 2 0 0 1 2-2h2M3 15v4a2 2 0 0 0 2 2h2M21 9V5a2 2 0 0 0-2-2h-2M21 15v4a2 2 0 0 1-2 2h-2M7 8v8M10 8v8M13 8v8M16 8v8" />
-            </svg>
-          </button>
+      )}
+
+      {/* ── 1. HEADER ── */}
+      <header className={styles.header}>
+        <h1 className={styles.headerTitle}>{s.title}</h1>
+        <Link href="/dashboard" className={styles.backLink}>
+          {common.back} ←
+        </Link>
+      </header>
+
+      {/* ── 2. SCAN BUTTON ── */}
+      <button
+        type="button"
+        className={styles.scanBtn}
+        onClick={() => setScanning(true)}
+        aria-label={s.scan}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M3 9V5a2 2 0 0 1 2-2h2M3 15v4a2 2 0 0 0 2 2h2M21 9V5a2 2 0 0 0-2-2h-2M21 15v4a2 2 0 0 1-2 2h-2M7 8v8M10 8v8M13 8v8M16 8v8" />
+        </svg>
+        {s.scan} — {(s as Record<string, unknown>).scanEmpty as string ?? "امسح الباركود"}
+      </button>
+
+      {/* Offline strip */}
+      {!online && (
+        <div className={styles.offlineBanner} role="status">
+          {syncLabels.offlineHint}
         </div>
-      </div>
+      )}
 
-      {/* ── Scrollable middle ── */}
-      <div className={styles.scrollArea}>
-        <div className={styles.scrollInner}>
-          {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
+      {/* ── 3. MAIN AREA ── */}
+      <div className={styles.main}>
 
-          {q ? (
-            results.length === 0 ? (
-              <p className={styles.resultsEmpty}>{tx.list.emptyFiltered}</p>
-            ) : (
-              <ul className={styles.results}>
-                {results.map((p) => {
-                  const stock = Number(p.stock);
-                  const minStock = Number(p.min_stock);
-                  const out = stock <= 0;
-                  const low = !out && minStock > 0 && stock <= minStock;
-                  return (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        className={styles.resultItem}
-                        onClick={() => doAdd(p)}
-                      >
-                        <span className={styles.resultName}>{safeDisplay(p.name)}</span>
-                        <span className={styles.resultMeta}>
-                          {nf.format(Number(p.sell_price))} {currency}
-                          <span className={`${styles.stockBadge} ${out ? styles.badgeOut : low ? styles.badgeLow : styles.badgeOk}`}>
-                            {nf.format(stock)}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )
-          ) : cart.length === 0 ? (
-            <div className={styles.emptyState}>
-              <svg className={styles.emptyIcon} width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M3 9V5a2 2 0 0 1 2-2h2M3 15v4a2 2 0 0 0 2 2h2M21 9V5a2 2 0 0 0-2-2h-2M21 15v4a2 2 0 0 1-2 2h-2M7 8v8M10 8v8M13 8v8M16 8v8" />
-              </svg>
-              <p className={styles.emptyText}>{(s as Record<string, unknown>).scanEmpty as string ?? "امسح باركود أو ابحث عن منتج"}</p>
-            </div>
-          ) : (
-            <>
-              <div className={styles.cartSection} id="cart-section">
-                {cart.map((l, i) => (
+        {/* CART SECTION */}
+        {cart.length > 0 && (
+          <div className={styles.cartSection}>
+            <span className={styles.sectionLabel}>السلة</span>
+            {cart.map((l, i) => (
+              <div key={i}>
+                <div
+                  className={styles.cartItemWrap}
+                  onTouchStart={onTouchStart}
+                  onTouchEnd={(e) => onTouchEnd(e, i)}
+                >
+                  <div className={styles.swipeDelete} aria-hidden>حذف</div>
                   <div
-                    key={i}
-                    className={styles.cartItemWrap}
-                    onTouchStart={onTouchStart}
-                    onTouchEnd={(e) => onTouchEnd(e, i)}
+                    className={`${styles.cartItemSlide}${removingIdx === i ? ` ${styles.removing}` : ""}`}
                   >
-                    <div className={styles.cartItemDelete} aria-hidden>حذف</div>
-                    <div className={`${styles.cartItem}${removingIdx === i ? ` ${styles.removing}` : ""}`}>
-                      <div className={styles.cartItemMain}>
-                        <span className={styles.cartItemName}>{safeDisplay(l.product_name)}</span>
-                        <span className={styles.cartItemPrice}>{nf.format(l.price)} {symbol}</span>
+                    <div className={styles.cartItem}>
+                      {/* RTL stepper: [+] → right, [−] → left */}
+                      <div className={styles.stepper}>
+                        <button
+                          type="button"
+                          className={styles.stepBtn}
+                          onClick={() => updateQty(i, l.qty + 1)}
+                          aria-label="زيادة"
+                        >
+                          +
+                        </button>
+                        <input
+                          type="number"
+                          className={styles.stepNum}
+                          value={l.qty}
+                          min={0}
+                          step="any"
+                          inputMode="decimal"
+                          dir="ltr"
+                          onChange={(e) => updateQty(i, Number(e.target.value) || 0)}
+                          aria-label={s.qty}
+                        />
+                        <button
+                          type="button"
+                          className={styles.stepBtn}
+                          onClick={() => updateQty(i, l.qty - 1)}
+                          aria-label="تقليل"
+                        >
+                          −
+                        </button>
                       </div>
-                      <div className={styles.cartItemRight}>
-                        <div className={styles.stepper}>
-                          <button
-                            type="button"
-                            className={styles.stepBtn}
-                            onClick={() => updateQty(i, l.qty - 1)}
-                            aria-label="تقليل"
-                          >
-                            −
-                          </button>
-                          <input
-                            className={styles.stepInput}
-                            type="number"
-                            min={0}
-                            step="any"
-                            inputMode="decimal"
-                            dir="ltr"
-                            value={l.qty}
-                            onChange={(e) => updateQty(i, Number(e.target.value) || 0)}
-                            aria-label={s.qty}
-                          />
-                          <button
-                            type="button"
-                            className={styles.stepBtn}
-                            onClick={() => updateQty(i, l.qty + 1)}
-                            aria-label="زيادة"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <span className={styles.cartItemTotal}>
-                          {nf.format(lineTotal(l))}
+                      <div className={styles.cartItemInfo}>
+                        <span className={styles.cartName}>{safeDisplay(l.product_name)}</span>
+                        <span className={styles.cartTotal}>
+                          {nf.format(lineTotal(l))} {currency}
                         </span>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Currency row — only when multiple currencies available */}
-              {currencies.length > 1 && (
-                <div className={styles.currencyRow}>
-                  <span className={styles.currencyLabel}>{tx.currency}</span>
-                  <CurrencySelect
-                    currencies={currencies}
-                    value={code}
-                    onChange={changeCurrency}
-                    locale={locale}
-                    className={styles.select}
-                  />
                 </div>
+                {i < cart.length - 1 && <hr className={styles.cartDivider} />}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* PRODUCTS SECTION */}
+        <div className={styles.productsSection}>
+          <div className={styles.productsHeader}>
+            <span className={styles.sectionLabel}>كل المنتجات</span>
+            <div className={styles.searchBar}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                style={{ flexShrink: 0, color: "var(--muted)" }}
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input
+                className={styles.searchInput}
+                type="search"
+                placeholder={s.searchProduct}
+                aria-label={s.searchProduct}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+              {q && (
+                <button
+                  type="button"
+                  className={styles.searchClear}
+                  onClick={() => setQ("")}
+                  aria-label={common.cancel}
+                >
+                  ×
+                </button>
               )}
-            </>
-          )}
+            </div>
+          </div>
+
+          <div className={styles.productsList}>
+            {filteredProducts.length === 0 ? (
+              <div className={styles.productsEmpty}>
+                {products.length === 0
+                  ? "لا يوجد منتجات — أضف منتجات من قسم المنتجات"
+                  : `لا نتائج لـ "${q}"`}
+              </div>
+            ) : (
+              filteredProducts.map((p) => {
+                const stock = Number(p.stock);
+                const minStock = Number(p.min_stock);
+                const out = stock <= 0;
+                const low = !out && minStock > 0 && stock <= minStock;
+                const inCart = cartProductIds.has(p.id);
+                const cartQty = cart.find((l) => l.product_id === p.id)?.qty ?? 0;
+
+                return (
+                  <div key={p.id} className={styles.productRow}>
+                    {/* [+] — first child in RTL → right side */}
+                    <button
+                      type="button"
+                      className={`${styles.addBtn}${inCart ? ` ${styles.addBtnInCart}` : ""}`}
+                      onClick={() => doAdd(p)}
+                      aria-label={`${s.add} ${p.name}`}
+                    >
+                      +
+                    </button>
+                    <div className={styles.productInfo}>
+                      <span className={styles.productName}>{safeDisplay(p.name)}</span>
+                      <div className={styles.productMeta}>
+                        <span className={styles.productPrice}>
+                          {nf.format(Number(p.sell_price))} {currency}
+                        </span>
+                        <span
+                          className={`${styles.stockBadge} ${out ? styles.badgeOut : low ? styles.badgeLow : styles.badgeOk}`}
+                        >
+                          {nf.format(stock)}
+                        </span>
+                        {inCart && (
+                          <span className={styles.inCartBadge}>
+                            في السلة ({cartQty})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── Fixed bottom bar ── */}
+      {/* ── 4. BOTTOM BAR ── */}
       <div className={styles.bottomBar}>
-        <div className={styles.bottomSummary}>
+        <div className={styles.bottomMeta}>
+          <span className={styles.totalAmt}>
+            {cart.length > 0 ? `${nf.format(cartTotal)} ${currency}` : "—"}
+          </span>
           {cart.length > 0 && (
-            <span className={styles.bottomCount}>
-              {nf.format(cart.length)} {(s as Record<string, unknown>).cartItems as string ?? "منتج في السلة"}
+            <span className={styles.itemCount}>
+              {nf.format(cart.length)}{" "}
+              {(s as Record<string, unknown>).cartItems as string ?? "منتج في السلة"}
             </span>
           )}
-          <span className={styles.bottomTotal}>
-            {cart.length > 0 ? `${nf.format(cartTotal)} ${symbol}` : "—"}
-          </span>
         </div>
         <button
-          id="confirm-sale-btn"
           type="button"
-          className={styles.confirmBtn}
+          className={styles.completeBtn}
           onClick={openSummary}
           disabled={saving || cart.length === 0}
         >
@@ -625,39 +660,50 @@ export function SellView({
               {s.completing}
             </>
           ) : (
-            (s as Record<string, unknown>).confirmSale as string ?? s.complete
+            <>
+              ← {(s as Record<string, unknown>).confirmSale as string ?? s.complete}
+            </>
           )}
         </button>
       </div>
 
-      {/* ── Continuous scanner — stays open across scans ── */}
+      {/* ── SCANNER (continuous) ── */}
       {scanning && (
         <BarcodeScanner
           continuous
           onDetected={onDetected}
-          onClose={() => setScanning(false)}
+          onClose={() => {
+            setScanning(false);
+            setScanAfterSheet(false);
+          }}
           labels={scanLabels}
         />
       )}
 
-      {/* ── Unknown barcode sheet ── */}
+      {/* ── UNKNOWN BARCODE SHEET ── */}
       {unknownBarcode && (
         <div
-          className={styles.sheetBackdrop}
-          onClick={(e) => { if (e.target === e.currentTarget) closeUnknownSheet(); }}
+          className={styles.backdrop}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeUnknownSheet();
+          }}
           role="dialog"
           aria-modal="true"
         >
-          <div className={styles.sheetCard}>
+          <div className={styles.sheet}>
             <h2 className={styles.sheetTitle}>{ub?.title ?? "منتج جديد 🆕"}</h2>
-            <p className={styles.sheetHint}>{ub?.hint ?? "الباركود غير موجود. أكمل البيانات الأساسية:"}</p>
+            <p className={styles.sheetHint}>{ub?.hint ?? "الباركود غير موجود:"}</p>
 
             <label className={styles.fieldLabel}>
               {ub?.barcodeLabel ?? "الباركود"}
-              <input className={styles.readonlyInput} readOnly value={unknownBarcode} />
+              <input
+                className={styles.inputReadonly}
+                readOnly
+                value={unknownBarcode}
+              />
             </label>
 
-            <div className={styles.sheetRow}>
+            <div className={styles.fieldRow}>
               <label className={styles.fieldLabel}>
                 {ub?.priceLabel ?? "سعر البيع *"}
                 <input
@@ -694,32 +740,38 @@ export function SellView({
                 className={styles.btnGhost}
                 onClick={closeUnknownSheet}
               >
-                {ub?.cancel ?? "إلغاء"}
+                {ub?.cancel ?? common.cancel}
               </button>
               <button
                 type="button"
                 className={styles.btnPrimary}
-                onClick={saveNewProduct}
+                onClick={() => void saveNewProduct()}
                 disabled={savingNew || !newPrice}
               >
-                {savingNew ? (ub?.saving ?? "جاري الحفظ...") : (ub?.save ?? "حفظ وإضافة للسلة")}
+                {savingNew
+                  ? <><Spinner />{ub?.saving ?? "جارٍ..."}</>
+                  : (ub?.save ?? "حفظ وأضف للسلة")}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Sale summary sheet ── */}
+      {/* ── SALE SUMMARY SHEET ── */}
       {summaryOpen && (
         <div
           className={styles.summaryBackdrop}
-          onClick={(e) => { if (e.target === e.currentTarget) setSummaryOpen(false); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSummaryOpen(false);
+          }}
           role="dialog"
           aria-modal="true"
         >
           <div className={styles.summarySheet}>
             <div className={styles.summaryHeader}>
-              <h2 className={styles.summaryTitle}>{(s as Record<string, unknown>).summarySale as string ?? "ملخص البيع"}</h2>
+              <h2 className={styles.summaryTitle}>
+                {(s as Record<string, unknown>).summarySale as string ?? "ملخص البيع"}
+              </h2>
               <button
                 type="button"
                 className={styles.summaryClose}
@@ -731,66 +783,58 @@ export function SellView({
             </div>
 
             {/* Items list */}
-            <div className={styles.summaryItems}>
+            <div className={styles.summaryItemsList}>
               {cart.map((l, i) => (
                 <div key={i} className={styles.summaryItem}>
-                  <span className={styles.summaryItemName}>{safeDisplay(l.product_name)}</span>
-                  <span className={styles.summaryItemQty}>× {nf.format(l.qty)}</span>
-                  <span className={styles.summaryItemAmt}>{nf.format(lineTotal(l))}</span>
+                  <span className={styles.siName}>{safeDisplay(l.product_name)}</span>
+                  <span className={styles.siQty}>× {nf.format(l.qty)}</span>
+                  <span className={styles.siAmt}>{nf.format(lineTotal(l))}</span>
                 </div>
               ))}
             </div>
 
-            <hr className={styles.summaryDivider} />
+            <hr className={styles.divider} />
 
             {/* Total */}
             <div className={styles.summaryTotalRow}>
               <span className={styles.summaryTotalLabel}>{s.total}</span>
               <span className={styles.summaryTotalAmt}>
-                {nf.format(discountedTotal)} {symbol}
+                {nf.format(discountedTotal)} {currency}
               </span>
             </div>
             {discountPct > 0 && (
               <div className={styles.summaryDiscountRow}>
                 <span>خصم {discountPct}%</span>
-                <span>− {nf.format(cartTotal - discountedTotal)} {symbol}</span>
-              </div>
-            )}
-            {!isBase && discountedTotal > 0 && (
-              <div className={styles.debtRow}>
-                <span className={styles.muted}>{tx.inBase}</span>
-                <span className={styles.muted}>≈ {nf.format(discountedTotal * rate)} {baseSymbol}</span>
+                <span>− {nf.format(round2(cartTotal - discountedTotal))} {currency}</span>
               </div>
             )}
 
-            {/* Discount field */}
-            <div className={styles.summarySection}>
-              <label className={styles.fieldLabel}>
-                {(s as Record<string, unknown>).summaryDiscount as string ?? "خصم %"}
-                <input
-                  className={styles.input}
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="any"
-                  inputMode="decimal"
-                  dir="ltr"
-                  placeholder="0"
-                  value={summaryDiscount}
-                  onChange={(e) => setSummaryDiscount(e.target.value)}
-                />
-              </label>
-            </div>
+            {/* Discount */}
+            <label className={styles.fieldLabel}>
+              {(s as Record<string, unknown>).summaryDiscount as string ?? "خصم %"}
+              <input
+                className={styles.input}
+                type="number"
+                min={0}
+                max={100}
+                step="any"
+                inputMode="decimal"
+                dir="ltr"
+                placeholder="0"
+                value={summaryDiscount}
+                onChange={(e) => setSummaryDiscount(e.target.value)}
+              />
+            </label>
 
             {/* Payment method */}
-            <div className={styles.summarySection}>
+            <div>
               <span className={styles.optLabel}>{s.payment}</span>
               <div className={styles.segment}>
                 {PAYMENT_METHODS.map((m) => (
                   <button
                     key={m}
                     type="button"
-                    className={`${styles.chip} ${summaryPayment === m ? styles.chipActive : ""}`}
+                    className={`${styles.chip}${summaryPayment === m ? ` ${styles.chipActive}` : ""}`}
                     onClick={() => setSummaryPayment(m)}
                   >
                     {payments[m]}
@@ -799,8 +843,8 @@ export function SellView({
               </div>
             </div>
 
-            {/* Customer */}
-            <div className={styles.summarySection}>
+            {/* Customer picker */}
+            <div>
               <span className={styles.optLabel}>{s.customer}</span>
               <PartyPicker
                 merchantId={merchantId}
@@ -817,10 +861,10 @@ export function SellView({
               />
             </div>
 
-            {/* Partial amount */}
+            {/* Partial paid */}
             {summaryPayment === "partial" && (
               <label className={styles.fieldLabel}>
-                {s.paidNow} ({symbol})
+                {s.paidNow} ({currency})
                 <input
                   className={styles.input}
                   type="number"
@@ -843,7 +887,7 @@ export function SellView({
                       ? discountedTotal
                       : Math.max(0, discountedTotal - (Number(summaryPaid) || 0)),
                   )}{" "}
-                  {symbol}
+                  {currency}
                 </span>
               </div>
             )}
@@ -857,18 +901,15 @@ export function SellView({
               onChange={(e) => setSummaryNote(e.target.value)}
             />
 
-            {/* Confirm button */}
+            {/* Confirm */}
             <button
               type="button"
-              className={styles.summaryConfirmBtn}
+              className={styles.confirmBtn}
               onClick={() => void proceedFromSummary()}
               disabled={saving}
             >
               {saving ? (
-                <>
-                  <Spinner />
-                  {s.completing}
-                </>
+                <><Spinner />{s.completing}</>
               ) : (
                 (s as Record<string, unknown>).summaryConfirm as string ?? "تأكيد البيع ✓"
               )}
@@ -877,10 +918,10 @@ export function SellView({
         </div>
       )}
 
-      {/* ── Oversell warning ── */}
+      {/* ── OVERSELL DIALOG ── */}
       {overdraw && (
         <div className={styles.overlay} role="dialog" aria-modal="true">
-          <div className={`${styles.confirmBox} ${styles.warnBox}`}>
+          <div className={styles.confirmBox}>
             <p className={styles.warnTitle}>{s.oversellTitle}</p>
             <div className={styles.warnRows}>
               <div className={styles.warnRow}>
@@ -896,9 +937,13 @@ export function SellView({
                 <strong>{nf.format(overdraw.required)}</strong>
               </div>
             </div>
-            <p className={styles.warnQuestion}>{s.oversellQuestion}</p>
+            <p className={styles.warnQ}>{s.oversellQuestion}</p>
             <div className={styles.confirmActions}>
-              <button type="button" className={styles.btnGhost} onClick={() => setOverdraw(null)}>
+              <button
+                type="button"
+                className={styles.btnGhost}
+                onClick={() => setOverdraw(null)}
+              >
                 {s.oversellNo}
               </button>
               <button
@@ -914,18 +959,16 @@ export function SellView({
         </div>
       )}
 
-      {/* ── Receipt ── */}
+      {/* ── RECEIPT ── */}
       {receipt && (
         <Receipt
           storeName={storeName}
-          currency={receipt.currencySymbol}
+          currency={currency}
           locale={locale}
           dateIso={receipt.date}
           lines={receipt.lines}
           total={receipt.total}
           invoiceNo={receipt.invoiceNo}
-          sypTotal={receipt.sypTotal}
-          baseSymbol={baseSymbol}
           labels={{
             title: tx.receipt.title,
             print: tx.receipt.print,
@@ -936,15 +979,6 @@ export function SellView({
             newSale: s.newSale,
           }}
           onClose={() => setReceipt(null)}
-        />
-      )}
-
-      {/* ── Tutorial ── */}
-      {tutorial.show && (
-        <TutorialOverlay
-          steps={SELL_STEPS}
-          onComplete={tutorial.onComplete}
-          onSkip={tutorial.onSkip}
         />
       )}
     </div>

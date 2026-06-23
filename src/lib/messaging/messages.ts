@@ -91,6 +91,22 @@ export function newProductsBatchMessage(o: {
   return `📦 ${o.storeName}\nتم إضافة ${nf.format(o.count)} منتج جديد بالباركود.\nأكمل بياناتهم من إدارة المنتجات.`;
 }
 
+export function saleMessage(o: {
+  storeName: string;
+  invoiceNo: string;
+  total: number;
+  currency: string;
+  payment: string;
+}): string {
+  const payMap: Record<string, string> = { cash: "كاش", credit: "آجل", partial: "جزئي" };
+  return [
+    `🛒 بيع جديد ${o.invoiceNo}`,
+    `${o.storeName}`,
+    `المبلغ: ${nf.format(o.total)} ${o.currency}`,
+    `الدفع: ${payMap[o.payment] ?? o.payment}`,
+  ].join("\n");
+}
+
 // Owner-triggered "please back me up" request sent to the admin's Telegram.
 export function backupRequestMessage(o: {
   storeName: string;

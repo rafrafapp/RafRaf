@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isTelegramConfigured, sendTelegram } from "./telegram";
 import { notifyMerchant } from "./dispatch";
-import { debtReminderMessage, newProductFromBarcodeMessage, newProductsBatchMessage, oversellMessage } from "./messages";
+import { debtReminderMessage, newProductFromBarcodeMessage, newProductsBatchMessage, oversellMessage, saleMessage } from "./messages";
 import { sanitizeText } from "@/lib/validation/sanitize";
 
 export type ReminderResult = { ok: true } | { error: string };
@@ -81,6 +81,34 @@ export async function notifyNewProductsBatch(barcodes: string[]): Promise<void> 
     await notifyMerchant(m, newProductsBatchMessage({
       storeName: m.store_name ?? "RafRaf",
       count: barcodes.length,
+    }));
+  } catch { /* best-effort */ }
+}
+
+// Single sale notification sent after a cart is confirmed.
+export async function notifySale(opts: {
+  invoiceNo: string;
+  total: number;
+  currency: string;
+  payment: string;
+}): Promise<void> {
+  try {
+    if (!isTelegramConfigured()) return;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: m } = await supabase
+      .from("merchants")
+      .select("store_name,notify_channel,telegram_chat_id")
+      .eq("id", user.id)
+      .single();
+    if (!m) return;
+    await notifyMerchant(m, saleMessage({
+      storeName: m.store_name ?? "RafRaf",
+      invoiceNo: opts.invoiceNo,
+      total: opts.total,
+      currency: opts.currency,
+      payment: opts.payment,
     }));
   } catch { /* best-effort */ }
 }
