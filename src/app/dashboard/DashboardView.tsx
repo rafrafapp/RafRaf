@@ -268,7 +268,7 @@ export function DashboardView({
           </span>
           <span className={styles.brandText}>
             <span className={styles.storeName}>{safeDisplay(storeName)}</span>
-            <span className={styles.date}>{dateStr}</span>
+            <span className={styles.date} suppressHydrationWarning>{dateStr}</span>
           </span>
         </Link>
         <div className={styles.topActions}>
@@ -417,7 +417,7 @@ export function DashboardView({
                       <span className={styles.activityTitle}>
                         {d.activity[r.type]}
                       </span>
-                      <span className={styles.activityTime}>{timeAgo(r.at)}</span>
+                      <span className={styles.activityTime} suppressHydrationWarning>{timeAgo(r.at)}</span>
                     </div>
                     <span
                       className={`${styles.activityAmount} ${income ? styles.amountIn : styles.amountOut}`}

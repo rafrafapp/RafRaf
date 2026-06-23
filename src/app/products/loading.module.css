@@ -1,0 +1,93 @@
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.page {
+  min-height: 100dvh;
+  padding-block-end: 5rem;
+  background: #faf8ff;
+  font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
+}
+
+.skeletonLine {
+  height: 0.85rem;
+  border-radius: 0.4rem;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-block-end: 1px solid #e2e8f0;
+  height: 60px;
+}
+
+.toolbar {
+  padding: 0.75rem 1rem 0;
+  background: #fff;
+  border-block-end: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-block-end: 0.75rem;
+}
+
+.searchSkeleton {
+  height: 2.6rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.tabRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tabSkeleton {
+  height: 2rem;
+  width: 5rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.productRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-block-end: 1px solid #f1f5f9;
+}
+
+.imgSkeleton {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.rowInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   createApiKey,
   revokeApiKey,
@@ -53,7 +53,8 @@ export function ApiKeysSection({
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
   const fmt = (iso: string | null) =>
     iso
       ? new Date(iso).toLocaleDateString(locale === "ar" ? "ar" : "en-GB")

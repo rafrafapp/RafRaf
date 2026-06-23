@@ -25,6 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description: dict.app.promise,
     manifest: "/manifest.json",
+    icons: { icon: "/icons/icon.svg", apple: "/icons/icon.svg" },
     applicationName: dict.app.name,
     appleWebApp: {
       capable: true,
