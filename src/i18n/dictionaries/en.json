@@ -151,6 +151,7 @@
     "noActivity": "No activity yet",
     "noAlerts": "Stock looks healthy ✓",
     "incompleteProducts": "Products need data completion",
+    "incompleteTileHint": "need completion",
     "noDebtors": "No outstanding debts ✓",
     "manualSync": "Sync",
     "newSaleInvoice": "New sale invoice",
@@ -292,7 +293,8 @@
       "searchCategory": "Search or add a category",
       "addCategory": "Add “{q}” as a category",
       "saveAnother": "Save & add another +",
-      "saved": "Product saved ✅"
+      "saved": "Product saved ✅",
+      "editSave": "Save changes"
     },
     "customFields": {
       "expiry": "Expiry date",
@@ -451,11 +453,17 @@
         "hint": "Barcode not found. Fill in the basics:",
         "barcodeLabel": "Barcode",
         "priceLabel": "Selling Price *",
-        "qtyLabel": "Quantity",
+        "qtyLabel": "Stock quantity",
         "save": "Save & Add to Cart",
         "saving": "Saving...",
         "cancel": "Cancel"
-      }
+      },
+      "summarySale": "Sale Summary",
+      "summaryConfirm": "Confirm Sale ✓",
+      "summaryDiscount": "Discount %",
+      "summaryNote": "Note",
+      "successTitle": "Sale Complete ✅",
+      "successSubtitle": "Recorded successfully"
     },
     "party": {
       "add": "Add “{q}”",

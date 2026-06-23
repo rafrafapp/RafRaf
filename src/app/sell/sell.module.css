@@ -391,110 +391,23 @@
   background: rgba(30, 58, 138, 0.04);
 }
 
-/* ── Payment / options card (below cart items) ── */
-.optionsCard {
+/* ── Currency row (compact, shown below cart when multiple currencies) ── */
+.currencyRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 0.9rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  border-radius: 0.6rem;
   margin-block-start: 0.25rem;
 }
 
-.optLabel {
+.currencyLabel {
   font-size: 0.75rem;
   color: var(--text-muted);
   font-weight: 600;
-  margin-block-end: 0.2rem;
-  display: block;
-}
-
-.segment {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.chip {
-  appearance: none;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.82rem;
-  padding: 0.4rem 0.75rem;
-  border-radius: 999px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.chipActive {
-  border-color: var(--brand);
-  background: var(--brand);
-  color: var(--brand-contrast);
-}
-
-.input {
-  font: inherit;
-  font-size: 1rem;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  padding: 0.6rem 0.8rem;
-  width: 100%;
-}
-
-.input:focus {
-  outline: 2px solid var(--brand);
-  outline-offset: 1px;
-}
-
-.select {
-  font: inherit;
-  font-size: 1rem;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  padding: 0.6rem 0.8rem;
-  width: 100%;
-}
-
-.debtRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: 0.88rem;
-}
-
-.debtAmt {
-  font-weight: 700;
-  color: var(--error);
-}
-
-.muted {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
-
-.textarea {
-  font: inherit;
-  font-size: 0.9rem;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  padding: 0.6rem 0.8rem;
-  width: 100%;
-  resize: none;
-}
-
-.textarea:focus {
-  outline: 2px solid var(--brand);
-  outline-offset: 1px;
+  white-space: nowrap;
 }
 
 /* ── Bottom summary bar ── */
@@ -572,7 +485,7 @@
   font-size: 0.88rem;
   font-weight: 500;
   text-align: center;
-  z-index: 500;
+  z-index: 600;
   animation: toastIn 0.2s ease;
   pointer-events: none;
   max-width: 22rem;
@@ -664,6 +577,288 @@
 
 .sheetActions > * {
   flex: 1;
+}
+
+/* ── Sale summary sheet ── */
+.summaryBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.summarySheet {
+  background: var(--surface);
+  border-radius: 1.25rem 1.25rem 0 0;
+  padding: 1.25rem 1.25rem max(1.25rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: sheetUp 0.28s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block-end: 0.25rem;
+  border-block-end: 1px solid var(--border);
+}
+
+.summaryTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--brand);
+}
+
+.summaryClose {
+  appearance: none;
+  border: none;
+  background: none;
+  font-size: 1.3rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  line-height: 1;
+}
+
+.summaryItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.summaryItem {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  padding-block: 0.25rem;
+}
+
+.summaryItemName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryItemQty {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.summaryItemAmt {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--brand);
+}
+
+.summaryDivider {
+  border: none;
+  border-block-start: 1px solid var(--border);
+  margin: 0;
+}
+
+.summaryTotalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.summaryTotalLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.summaryTotalAmt {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryDiscountRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #1c7c54;
+}
+
+.summarySection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.select {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  width: 100%;
+}
+
+.optLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  display: block;
+}
+
+.segment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chipActive {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+
+.muted {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.debtRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.88rem;
+}
+
+.debtAmt {
+  font-weight: 700;
+  color: var(--error);
+}
+
+.textarea {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  width: 100%;
+  resize: none;
+  box-sizing: border-box;
+}
+
+.textarea:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.summaryConfirmBtn {
+  appearance: none;
+  border: none;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.9rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.summaryConfirmBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Success flash overlay ── */
+.successFlash {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: #16a34a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.successIcon {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.successTitle {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.successSub {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .btnGhost {

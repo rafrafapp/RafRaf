@@ -26,7 +26,7 @@ import { Receipt, type ReceiptLine } from "@/components/Receipt";
 import { Spinner } from "@/components/Spinner";
 import { BackButton } from "@/components/BackButton";
 import { safeDisplay } from "@/lib/validation/sanitize";
-import { notifyOversell, notifyNewProduct } from "@/lib/messaging/actions";
+import { notifyOversell, notifyNewProductsBatch } from "@/lib/messaging/actions";
 import styles from "./sell.module.css";
 
 const BarcodeScanner = dynamic(
@@ -57,10 +57,9 @@ type Props = {
 
 const SELL_STEPS: TutorialStep[] = [
   { target: "#search-bar", title_ar: "ابحث عن المنتج", text_ar: "اكتب اسم المنتج أو امسح الباركود", position: "bottom" },
-  { target: "#barcode-btn", title_ar: "مسح الباركود", text_ar: "اضغط لفتح الكاميرا ومسح باركود المنتج", position: "bottom" },
-  { target: "#cart-section", title_ar: "سلة المشتريات", text_ar: "المنتجات اللي اخترتها تظهر هنا — اسحب لليسار لحذف", position: "top" },
-  { target: "#payment-selector", title_ar: "طريقة الدفع", text_ar: "اختر كاش أو دين أو دفع جزئي", position: "top" },
-  { target: "#confirm-sale-btn", title_ar: "إتمام البيع", text_ar: "اضغط هنا لإتمام البيع وتسجيله بالسجل", position: "top" },
+  { target: "#barcode-btn", title_ar: "مسح الباركود", text_ar: "الكاميرا تبقى مفتوحة — امسح منتجات متعددة بدون توقف", position: "bottom" },
+  { target: "#cart-section", title_ar: "سلة المشتريات", text_ar: "المنتجات المضافة تظهر هنا — اسحب لليسار لحذف", position: "top" },
+  { target: "#confirm-sale-btn", title_ar: "إتمام البيع", text_ar: "اضغط هنا لعرض ملخص البيع وتأكيد الدفع", position: "top" },
 ];
 
 function lineTotal(l: CartLine): number {
@@ -88,21 +87,42 @@ export function SellView({
   const baseSymbol = base?.symbol ?? "ل.س";
   const isBase = !selected || selected.is_base;
 
-  // Search state (lifted from ProductPicker into this view)
+  // Search + scan
   const [q, setQ] = useState("");
   const [scanning, setScanning] = useState(false);
 
-  // Cart state
+  // Cart
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [payment, setPayment] = useState<PaymentMethod>("cash");
-  const [customer, setCustomer] = useState<Party | null>(null);
-  const [paid, setPaid] = useState("");
-  const [note, setNote] = useState("");
 
-  // UI state
+  // UI
   const [toast, setToast] = useState<string | null>(null);
   const [removingIdx, setRemovingIdx] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const busyRef = useRef(false);
+
+  // Unknown barcode sheet
+  const [unknownBarcode, setUnknownBarcode] = useState<string | null>(null);
+  const [newPrice, setNewPrice] = useState("");
+  const [newQty, setNewQty] = useState("1");
+  const [savingNew, setSavingNew] = useState(false);
+  const [scanAfterSheet, setScanAfterSheet] = useState(false);
+
+  // Track barcodes added this session for batch notification
+  const [newBarcodeProducts, setNewBarcodeProducts] = useState<string[]>([]);
+
+  // Summary sheet state
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryPayment, setSummaryPayment] = useState<PaymentMethod>("cash");
+  const [summaryCustomer, setSummaryCustomer] = useState<Party | null>(null);
+  const [summaryPaid, setSummaryPaid] = useState("");
+  const [summaryNote, setSummaryNote] = useState("");
+  const [summaryDiscount, setSummaryDiscount] = useState("");
+
+  // Oversell dialog
   const [overdraw, setOverdraw] = useState<{ name: string; available: number; required: number } | null>(null);
+
+  // Success flash + receipt
+  const [successFlash, setSuccessFlash] = useState(false);
   const [receipt, setReceipt] = useState<{
     lines: ReceiptLine[];
     total: number;
@@ -111,14 +131,6 @@ export function SellView({
     currencySymbol: string;
     sypTotal: number | null;
   } | null>(null);
-  const [saving, setSaving] = useState(false);
-  const busyRef = useRef(false);
-
-  // Unknown barcode modal state
-  const [unknownBarcode, setUnknownBarcode] = useState<string | null>(null);
-  const [newPrice, setNewPrice] = useState("");
-  const [newQty, setNewQty] = useState("1");
-  const [savingNew, setSavingNew] = useState(false);
 
   // Swipe tracking
   const touchStartX = useRef<number | null>(null);
@@ -138,18 +150,28 @@ export function SellView({
   const results = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return [];
-    const list = products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(needle) ||
-        (p.name_en?.toLowerCase().includes(needle) ?? false) ||
-        (p.barcode?.toLowerCase().includes(needle) ?? false),
-    );
-    return [...list].sort((a, b) => a.name.localeCompare(b.name, "ar")).slice(0, 30);
+    return products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(needle) ||
+          (p.name_en?.toLowerCase().includes(needle) ?? false) ||
+          (p.barcode?.toLowerCase().includes(needle) ?? false),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name, "ar"))
+      .slice(0, 30);
   }, [products, q]);
+
+  const cartTotal = useMemo(
+    () => cart.reduce((sum, l) => sum + lineTotal(l), 0),
+    [cart],
+  );
+
+  const discountPct = parseFloat(summaryDiscount) || 0;
+  const discountedTotal = discountPct > 0 ? cartTotal * (1 - discountPct / 100) : cartTotal;
 
   function showToast(msg: string) {
     setToast(msg);
-    setTimeout(() => setToast(null), 2200);
+    setTimeout(() => setToast(null), 1800);
   }
 
   function doAdd(p: LocalProduct) {
@@ -172,7 +194,10 @@ export function SellView({
       ];
     });
     setQ("");
-    showToast(`✓ ${safeDisplay(p.name)} — ${s.addedToCart ?? "أضيف للسلة"}`);
+    // Show toast above scanner overlay
+    const newQtyInCart = cart.find((l) => l.product_id === p.id)?.qty;
+    const qtyMsg = newQtyInCart ? `${newQtyInCart + 1}` : "1";
+    showToast(`✅ ${safeDisplay(p.name)} — ${s.qty}: ${qtyMsg}`);
   }
 
   function changeCurrency(newCode: string) {
@@ -184,7 +209,7 @@ export function SellView({
         price: round2(fromBase(toBase(l.price, oldRate), newRate)),
       })),
     );
-    setPaid("");
+    setSummaryPaid("");
     setCurrencyCode(newCode);
   }
 
@@ -212,18 +237,30 @@ export function SellView({
     if (touchStartX.current === null) return;
     const delta = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
-    if (delta < -80) removeLineAnimated(index); // swipe left to delete
+    if (delta < -80) removeLineAnimated(index);
   }
 
+  // Scanner detection — continuous: camera stays open for known products
   function onDetected(code: string) {
-    setScanning(false);
     const exact = products.find((p) => p.barcode === code);
     if (exact) {
       doAdd(exact);
+      // scanner stays open (continuous mode — don't setScanning(false))
     } else {
+      // Pause scanner for unknown barcode sheet
+      setScanning(false);
+      setScanAfterSheet(true);
       setUnknownBarcode(code);
       setNewPrice("");
       setNewQty("1");
+    }
+  }
+
+  function closeUnknownSheet() {
+    setUnknownBarcode(null);
+    if (scanAfterSheet) {
+      setScanAfterSheet(false);
+      setScanning(true); // reopen scanner
     }
   }
 
@@ -277,19 +314,29 @@ export function SellView({
         _base_updated_at: null,
       };
       doAdd(newProduct);
+      // Track for batch notification at end of sale (not individually)
+      setNewBarcodeProducts((prev) => [...prev, unknownBarcode]);
       setUnknownBarcode(null);
-      void notifyNewProduct(unknownBarcode).catch(() => {});
+      if (scanAfterSheet) {
+        setScanAfterSheet(false);
+        setScanning(true); // reopen scanner
+      }
       void syncAll(merchantId).catch(() => {});
     } finally {
       setSavingNew(false);
     }
   }
 
-  const total = cart.reduce((sum, l) => sum + lineTotal(l), 0);
+  // Open summary sheet
+  function openSummary() {
+    if (cart.length === 0 || saving) return;
+    setSummaryOpen(true);
+  }
 
-  async function complete() {
-    if (cart.length === 0 || busyRef.current) return;
-    if (payment !== "cash" && !customer) {
+  // Validate + oversell check, then doComplete
+  async function proceedFromSummary() {
+    if (busyRef.current) return;
+    if (summaryPayment !== "cash" && !summaryCustomer) {
       showToast(s.creditNoCustomer);
       return;
     }
@@ -299,30 +346,43 @@ export function SellView({
       const p = await db.products.get(l.product_id);
       if (p && l.qty > Number(p.stock)) {
         setOverdraw({ name: l.product_name, available: Number(p.stock), required: l.qty });
-        return;
+        return; // oversell dialog shows on top of summary
       }
     }
-    await proceedComplete();
+    await doComplete();
   }
 
-  async function proceedComplete() {
-    if (cart.length === 0 || busyRef.current) return;
+  async function doComplete() {
+    if (busyRef.current) return;
     busyRef.current = true;
     const oversold = overdraw;
     setOverdraw(null);
     setSaving(true);
+
+    // Capture currency state at call time
+    const txCode = code;
+    const txRate = rate;
+    const txSymbol = symbol;
+    const txIsBase = isBase;
+
     try {
+      const pct = parseFloat(summaryDiscount) || 0;
+      const saleLines: CartLine[] = pct > 0
+        ? cart.map((l) => ({ ...l, discount: pct }))
+        : [...cart];
+
       const group = await recordSale({
         merchantId,
-        currency: code,
-        exchangeRate: rate,
-        payment,
-        note: note.trim() || null,
-        lines: cart,
-        customerId: customer?.id ?? null,
-        paid: payment === "partial" ? Number(paid) || 0 : undefined,
+        currency: txCode,
+        exchangeRate: txRate,
+        payment: summaryPayment,
+        note: summaryNote.trim() || null,
+        lines: saleLines,
+        customerId: summaryCustomer?.id ?? null,
+        paid: summaryPayment === "partial" ? Number(summaryPaid) || 0 : undefined,
       });
-      const lines: ReceiptLine[] = cart.map((l) => ({
+
+      const lines: ReceiptLine[] = saleLines.map((l) => ({
         name: l.product_name,
         qty: l.qty,
         price: l.price,
@@ -334,22 +394,43 @@ export function SellView({
         .toArray();
       const invoiceNo = formatInvoiceNo(buildInvoiceNumbers(allTx).get(group));
       const recTotal = lines.reduce((sum, l) => sum + l.total, 0);
-      setReceipt({
+      const recData = {
         lines,
         total: recTotal,
         date: new Date().toISOString(),
         invoiceNo,
-        currencySymbol: symbol,
-        sypTotal: isBase ? null : recTotal * rate,
-      });
+        currencySymbol: txSymbol,
+        sypTotal: txIsBase ? null : recTotal * txRate,
+      };
+
+      // Close summary + reset state
+      setSummaryOpen(false);
       setCart([]);
-      setNote("");
-      setPayment("cash");
-      setCustomer(null);
-      setPaid("");
-      if (oversold)
+      setSummaryPayment("cash");
+      setSummaryCustomer(null);
+      setSummaryPaid("");
+      setSummaryNote("");
+      setSummaryDiscount("");
+
+      // Side effects: notifications + sync
+      if (oversold) {
         void notifyOversell(oversold.name, oversold.available, oversold.required).catch(() => {});
+      }
+      if (newBarcodeProducts.length > 0) {
+        const barcodes = [...newBarcodeProducts];
+        setNewBarcodeProducts([]);
+        void notifyNewProductsBatch(barcodes).catch(() => {});
+      }
       void syncAll(merchantId).catch(() => {});
+
+      // Brief success flash, then show receipt
+      setSuccessFlash(true);
+      setTimeout(() => {
+        setSuccessFlash(false);
+        setReceipt(recData);
+      }, 1200);
+    } catch {
+      showToast(s.completing + " — خطأ");
     } finally {
       setSaving(false);
       busyRef.current = false;
@@ -358,8 +439,17 @@ export function SellView({
 
   return (
     <div className={styles.page}>
-      {/* Toast */}
+      {/* Toast — visible above scanner overlay (z-index 600) */}
       {toast && <div className={styles.toast} role="status">{toast}</div>}
+
+      {/* ── Success flash ── */}
+      {successFlash && (
+        <div className={styles.successFlash}>
+          <span className={styles.successIcon}>✅</span>
+          <h2 className={styles.successTitle}>{(s as Record<string, unknown>).successTitle as string ?? "تم البيع ✅"}</h2>
+          <p className={styles.successSub}>{(s as Record<string, unknown>).successSubtitle as string ?? "سُجّل بنجاح"}</p>
+        </div>
+      )}
 
       {/* ── Sticky top: header + search ── */}
       <div className={styles.stickyTop}>
@@ -388,7 +478,6 @@ export function SellView({
             onClick={() => setScanning(true)}
             aria-label={s.scan}
           >
-            {/* Barcode SVG icon */}
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M3 9V5a2 2 0 0 1 2-2h2M3 15v4a2 2 0 0 0 2 2h2M21 9V5a2 2 0 0 0-2-2h-2M21 15v4a2 2 0 0 1-2 2h-2M7 8v8M10 8v8M13 8v8M16 8v8" />
             </svg>
@@ -402,7 +491,6 @@ export function SellView({
           {!online && <p className={styles.offlineHint}>{syncLabels.offlineHint}</p>}
 
           {q ? (
-            /* Search results */
             results.length === 0 ? (
               <p className={styles.resultsEmpty}>{tx.list.emptyFiltered}</p>
             ) : (
@@ -433,7 +521,6 @@ export function SellView({
               </ul>
             )
           ) : cart.length === 0 ? (
-            /* Empty state */
             <div className={styles.emptyState}>
               <svg className={styles.emptyIcon} width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 9V5a2 2 0 0 1 2-2h2M3 15v4a2 2 0 0 0 2 2h2M21 9V5a2 2 0 0 0-2-2h-2M21 15v4a2 2 0 0 1-2 2h-2M7 8v8M10 8v8M13 8v8M16 8v8" />
@@ -441,7 +528,6 @@ export function SellView({
               <p className={styles.emptyText}>{(s as Record<string, unknown>).scanEmpty as string ?? "امسح باركود أو ابحث عن منتج"}</p>
             </div>
           ) : (
-            /* Cart items + options */
             <>
               <div className={styles.cartSection} id="cart-section">
                 {cart.map((l, i) => (
@@ -496,105 +582,25 @@ export function SellView({
                 ))}
               </div>
 
-              {/* Payment options card */}
-              <div className={styles.optionsCard} id="payment-selector">
-                {currencies.length > 1 && (
-                  <div>
-                    <span className={styles.optLabel}>{tx.currency}</span>
-                    <CurrencySelect
-                      currencies={currencies}
-                      value={code}
-                      onChange={changeCurrency}
-                      locale={locale}
-                      className={styles.select}
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <span className={styles.optLabel}>{s.payment}</span>
-                  <div className={styles.segment}>
-                    {PAYMENT_METHODS.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        className={`${styles.chip} ${payment === m ? styles.chipActive : ""}`}
-                        onClick={() => setPayment(m)}
-                      >
-                        {payments[m]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <span className={styles.optLabel}>{s.customer}</span>
-                  <PartyPicker
-                    merchantId={merchantId}
-                    kind="customer"
-                    value={customer}
-                    onChange={setCustomer}
-                    labels={{
-                      search: s.searchCustomer,
-                      none: s.walkIn,
-                      add: tx.party.add,
-                      selected: tx.party.selected,
-                      change: tx.party.change,
-                    }}
+              {/* Currency row — only when multiple currencies available */}
+              {currencies.length > 1 && (
+                <div className={styles.currencyRow}>
+                  <span className={styles.currencyLabel}>{tx.currency}</span>
+                  <CurrencySelect
+                    currencies={currencies}
+                    value={code}
+                    onChange={changeCurrency}
+                    locale={locale}
+                    className={styles.select}
                   />
                 </div>
-
-                {payment === "partial" && (
-                  <label className={styles.fieldLabel}>
-                    {s.paidNow} ({symbol})
-                    <input
-                      className={styles.input}
-                      type="number"
-                      min={0}
-                      step="any"
-                      inputMode="decimal"
-                      dir="ltr"
-                      value={paid}
-                      onChange={(e) => setPaid(e.target.value)}
-                    />
-                  </label>
-                )}
-
-                {payment !== "cash" && customer && (
-                  <div className={styles.debtRow}>
-                    <span className={styles.muted}>{s.remaining}</span>
-                    <span className={styles.debtAmt}>
-                      {nf.format(
-                        payment === "credit"
-                          ? total
-                          : Math.max(0, total - (Number(paid) || 0)),
-                      )}{" "}
-                      {symbol}
-                    </span>
-                  </div>
-                )}
-
-                {!isBase && total > 0 && (
-                  <div className={styles.debtRow}>
-                    <span className={styles.muted}>{tx.inBase}</span>
-                    <span className={styles.muted}>≈ {nf.format(total * rate)} {baseSymbol}</span>
-                  </div>
-                )}
-
-                <textarea
-                  className={styles.textarea}
-                  placeholder={s.note}
-                  rows={2}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-              </div>
+              )}
             </>
           )}
         </div>
       </div>
 
-      {/* ── Fixed bottom bar: summary + confirm ── */}
+      {/* ── Fixed bottom bar ── */}
       <div className={styles.bottomBar}>
         <div className={styles.bottomSummary}>
           {cart.length > 0 && (
@@ -603,14 +609,14 @@ export function SellView({
             </span>
           )}
           <span className={styles.bottomTotal}>
-            {cart.length > 0 ? `${nf.format(total)} ${symbol}` : "—"}
+            {cart.length > 0 ? `${nf.format(cartTotal)} ${symbol}` : "—"}
           </span>
         </div>
         <button
           id="confirm-sale-btn"
           type="button"
           className={styles.confirmBtn}
-          onClick={complete}
+          onClick={openSummary}
           disabled={saving || cart.length === 0}
         >
           {saving ? (
@@ -624,9 +630,10 @@ export function SellView({
         </button>
       </div>
 
-      {/* ── Scanner ── */}
+      {/* ── Continuous scanner — stays open across scans ── */}
       {scanning && (
         <BarcodeScanner
+          continuous
           onDetected={onDetected}
           onClose={() => setScanning(false)}
           labels={scanLabels}
@@ -637,12 +644,12 @@ export function SellView({
       {unknownBarcode && (
         <div
           className={styles.sheetBackdrop}
-          onClick={(e) => { if (e.target === e.currentTarget) { setUnknownBarcode(null); } }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeUnknownSheet(); }}
           role="dialog"
           aria-modal="true"
         >
           <div className={styles.sheetCard}>
-            <h2 className={styles.sheetTitle}>{ub?.title ?? "منتج جديد"}</h2>
+            <h2 className={styles.sheetTitle}>{ub?.title ?? "منتج جديد 🆕"}</h2>
             <p className={styles.sheetHint}>{ub?.hint ?? "الباركود غير موجود. أكمل البيانات الأساسية:"}</p>
 
             <label className={styles.fieldLabel}>
@@ -667,7 +674,7 @@ export function SellView({
                 />
               </label>
               <label className={styles.fieldLabel}>
-                {ub?.qtyLabel ?? "الكمية"}
+                {ub?.qtyLabel ?? "الكمية بالمخزون"}
                 <input
                   className={styles.input}
                   type="number"
@@ -685,7 +692,7 @@ export function SellView({
               <button
                 type="button"
                 className={styles.btnGhost}
-                onClick={() => setUnknownBarcode(null)}
+                onClick={closeUnknownSheet}
               >
                 {ub?.cancel ?? "إلغاء"}
               </button>
@@ -698,6 +705,174 @@ export function SellView({
                 {savingNew ? (ub?.saving ?? "جاري الحفظ...") : (ub?.save ?? "حفظ وإضافة للسلة")}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sale summary sheet ── */}
+      {summaryOpen && (
+        <div
+          className={styles.summaryBackdrop}
+          onClick={(e) => { if (e.target === e.currentTarget) setSummaryOpen(false); }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className={styles.summarySheet}>
+            <div className={styles.summaryHeader}>
+              <h2 className={styles.summaryTitle}>{(s as Record<string, unknown>).summarySale as string ?? "ملخص البيع"}</h2>
+              <button
+                type="button"
+                className={styles.summaryClose}
+                onClick={() => setSummaryOpen(false)}
+                aria-label={common.cancel}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Items list */}
+            <div className={styles.summaryItems}>
+              {cart.map((l, i) => (
+                <div key={i} className={styles.summaryItem}>
+                  <span className={styles.summaryItemName}>{safeDisplay(l.product_name)}</span>
+                  <span className={styles.summaryItemQty}>× {nf.format(l.qty)}</span>
+                  <span className={styles.summaryItemAmt}>{nf.format(lineTotal(l))}</span>
+                </div>
+              ))}
+            </div>
+
+            <hr className={styles.summaryDivider} />
+
+            {/* Total */}
+            <div className={styles.summaryTotalRow}>
+              <span className={styles.summaryTotalLabel}>{s.total}</span>
+              <span className={styles.summaryTotalAmt}>
+                {nf.format(discountedTotal)} {symbol}
+              </span>
+            </div>
+            {discountPct > 0 && (
+              <div className={styles.summaryDiscountRow}>
+                <span>خصم {discountPct}%</span>
+                <span>− {nf.format(cartTotal - discountedTotal)} {symbol}</span>
+              </div>
+            )}
+            {!isBase && discountedTotal > 0 && (
+              <div className={styles.debtRow}>
+                <span className={styles.muted}>{tx.inBase}</span>
+                <span className={styles.muted}>≈ {nf.format(discountedTotal * rate)} {baseSymbol}</span>
+              </div>
+            )}
+
+            {/* Discount field */}
+            <div className={styles.summarySection}>
+              <label className={styles.fieldLabel}>
+                {(s as Record<string, unknown>).summaryDiscount as string ?? "خصم %"}
+                <input
+                  className={styles.input}
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="any"
+                  inputMode="decimal"
+                  dir="ltr"
+                  placeholder="0"
+                  value={summaryDiscount}
+                  onChange={(e) => setSummaryDiscount(e.target.value)}
+                />
+              </label>
+            </div>
+
+            {/* Payment method */}
+            <div className={styles.summarySection}>
+              <span className={styles.optLabel}>{s.payment}</span>
+              <div className={styles.segment}>
+                {PAYMENT_METHODS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`${styles.chip} ${summaryPayment === m ? styles.chipActive : ""}`}
+                    onClick={() => setSummaryPayment(m)}
+                  >
+                    {payments[m]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Customer */}
+            <div className={styles.summarySection}>
+              <span className={styles.optLabel}>{s.customer}</span>
+              <PartyPicker
+                merchantId={merchantId}
+                kind="customer"
+                value={summaryCustomer}
+                onChange={setSummaryCustomer}
+                labels={{
+                  search: s.searchCustomer,
+                  none: s.walkIn,
+                  add: tx.party.add,
+                  selected: tx.party.selected,
+                  change: tx.party.change,
+                }}
+              />
+            </div>
+
+            {/* Partial amount */}
+            {summaryPayment === "partial" && (
+              <label className={styles.fieldLabel}>
+                {s.paidNow} ({symbol})
+                <input
+                  className={styles.input}
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={summaryPaid}
+                  onChange={(e) => setSummaryPaid(e.target.value)}
+                />
+              </label>
+            )}
+
+            {summaryPayment !== "cash" && summaryCustomer && (
+              <div className={styles.debtRow}>
+                <span className={styles.muted}>{s.remaining}</span>
+                <span className={styles.debtAmt}>
+                  {nf.format(
+                    summaryPayment === "credit"
+                      ? discountedTotal
+                      : Math.max(0, discountedTotal - (Number(summaryPaid) || 0)),
+                  )}{" "}
+                  {symbol}
+                </span>
+              </div>
+            )}
+
+            {/* Note */}
+            <textarea
+              className={styles.textarea}
+              placeholder={(s as Record<string, unknown>).summaryNote as string ?? "ملاحظة"}
+              rows={2}
+              value={summaryNote}
+              onChange={(e) => setSummaryNote(e.target.value)}
+            />
+
+            {/* Confirm button */}
+            <button
+              type="button"
+              className={styles.summaryConfirmBtn}
+              onClick={() => void proceedFromSummary()}
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <Spinner />
+                  {s.completing}
+                </>
+              ) : (
+                (s as Record<string, unknown>).summaryConfirm as string ?? "تأكيد البيع ✓"
+              )}
+            </button>
           </div>
         </div>
       )}
@@ -729,7 +904,7 @@ export function SellView({
               <button
                 type="button"
                 className={styles.btnWarn}
-                onClick={() => void proceedComplete()}
+                onClick={() => void doComplete()}
                 disabled={saving}
               >
                 {saving ? <><Spinner />{s.completing}</> : s.oversellYes}

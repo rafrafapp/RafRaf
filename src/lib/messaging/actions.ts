@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isTelegramConfigured, sendTelegram } from "./telegram";
 import { notifyMerchant } from "./dispatch";
-import { debtReminderMessage, newProductFromBarcodeMessage, oversellMessage } from "./messages";
+import { debtReminderMessage, newProductFromBarcodeMessage, newProductsBatchMessage, oversellMessage } from "./messages";
 import { sanitizeText } from "@/lib/validation/sanitize";
 
 export type ReminderResult = { ok: true } | { error: string };
@@ -60,6 +60,27 @@ export async function notifyNewProduct(barcode: string): Promise<void> {
     await notifyMerchant(m, newProductFromBarcodeMessage({
       storeName: m.store_name ?? "RafRaf",
       barcode: sanitizeText(String(barcode)).slice(0, 80),
+    }));
+  } catch { /* best-effort */ }
+}
+
+// Notify the merchant about multiple new products created via barcode scan in a
+// single sale session. Batched so the merchant gets one message, not one per item.
+export async function notifyNewProductsBatch(barcodes: string[]): Promise<void> {
+  try {
+    if (!isTelegramConfigured() || barcodes.length === 0) return;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: m } = await supabase
+      .from("merchants")
+      .select("store_name,notify_channel,telegram_chat_id")
+      .eq("id", user.id)
+      .single();
+    if (!m) return;
+    await notifyMerchant(m, newProductsBatchMessage({
+      storeName: m.store_name ?? "RafRaf",
+      count: barcodes.length,
     }));
   } catch { /* best-effort */ }
 }

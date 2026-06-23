@@ -2,11 +2,6 @@ import { redirect } from "next/navigation";
 import { getCurrentLocale } from "@/i18n/locale";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getUser, getMerchantContext } from "@/lib/auth/merchant";
-import {
-  getBusinessTypeBySlug,
-  resolveCustomFields,
-} from "@/lib/business-types/read";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { BackButton } from "@/components/BackButton";
 import { EditProductView } from "../../EditProductView";
 import styles from "../../product-form.module.css";
@@ -26,19 +21,11 @@ export default async function EditProductPage({
   const { id } = await params;
   const locale = await getCurrentLocale();
   const dict = await getDictionary(locale);
-  const bizType = await getBusinessTypeBySlug(merchant?.business_type ?? null);
-  const customFields = resolveCustomFields(bizType, locale);
 
   return (
     <main className={styles.main}>
       <div className={styles.topbar}>
         <span className={styles.logo}>{dict.app.name}</span>
-        <div className={styles.headerActions}>
-          <LanguageSwitcher
-            current={locale}
-            labels={{ arabic: dict.common.arabic, english: dict.common.english }}
-          />
-        </div>
       </div>
 
       <div className={styles.card}>
@@ -47,7 +34,7 @@ export default async function EditProductPage({
         <EditProductView
           id={id}
           merchantId={merchant?.id ?? user.id}
-          customFields={customFields}
+          locale={locale}
           products={dict.products}
           common={dict.common}
           currency={merchant?.default_currency ?? "SYP"}

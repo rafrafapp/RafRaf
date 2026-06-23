@@ -12,6 +12,7 @@ import styles from "./BarcodeScanner.module.css";
 type Props = {
   onDetected: (text: string) => void;
   onClose: () => void;
+  continuous?: boolean;
   labels: {
     title: string;
     hint: string;
@@ -68,12 +69,13 @@ function successFeedback() {
   }
 }
 
-export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
+export function BarcodeScanner({ onDetected, onClose, continuous = false, labels }: Props) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
   const doneRef = useRef(false);
+  const lastScanRef = useRef<{ code: string; at: number } | null>(null);
   const [error, setError] = useState(false);
   const [uploadFailed, setUploadFailed] = useState(false);
 
@@ -137,7 +139,17 @@ export function BarcodeScanner({ onDetected, onClose, labels }: Props) {
 
     const onResult = (result: QuaggaJSResultObject) => {
       const code = result?.codeResult?.code;
-      if (code) finish(String(code));
+      if (!code) return;
+      if (continuous) {
+        const now = Date.now();
+        const last = lastScanRef.current;
+        if (last && last.code === String(code) && now - last.at < 1500) return;
+        lastScanRef.current = { code: String(code), at: now };
+        successFeedback();
+        onDetectedRef.current(String(code));
+      } else {
+        finish(String(code));
+      }
     };
 
     const config: QuaggaJSConfigObject = {

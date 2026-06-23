@@ -1,18 +1,17 @@
 "use client";
 
 import { useLiveQuery } from "dexie-react-hooks";
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
-import type { ProductCustomField } from "@/lib/validation/product";
 import { getLocalProduct } from "@/lib/offline/products-repo";
 import { useSync } from "@/lib/offline/useSync";
-import { ProductForm } from "./ProductForm";
-import { DeleteProductButton } from "./DeleteProductButton";
+import { QuickAddForm } from "./QuickAddForm";
 import styles from "./product-form.module.css";
 
 type Props = {
   id: string;
   merchantId: string;
-  customFields: ProductCustomField[];
+  locale: Locale;
   products: Dictionary["products"];
   common: Dictionary["common"];
   currency: string;
@@ -21,12 +20,11 @@ type Props = {
 export function EditProductView({
   id,
   merchantId,
-  customFields,
+  locale,
   products,
   common,
   currency,
 }: Props) {
-  // Pull on mount so a direct link to an unvisited product still resolves.
   useSync(merchantId);
   const product = useLiveQuery(() => getLocalProduct(id), [id]);
 
@@ -42,24 +40,14 @@ export function EditProductView({
   }
 
   return (
-    <>
-      <ProductForm
-        mode="edit"
-        merchantId={merchantId}
-        initial={product}
-        customFields={customFields}
-        products={products}
-        common={common}
-        currency={currency}
-      />
-      <div className={styles.deleteWrap}>
-        <DeleteProductButton
-          id={product.id}
-          merchantId={merchantId}
-          label={products.delete}
-          confirmText={products.deleteConfirm}
-        />
-      </div>
-    </>
+    <QuickAddForm
+      mode="edit"
+      merchantId={merchantId}
+      initial={product}
+      products={products}
+      common={common}
+      currency={currency}
+      locale={locale}
+    />
   );
 }

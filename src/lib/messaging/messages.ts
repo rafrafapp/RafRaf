@@ -84,6 +84,13 @@ export function newProductFromBarcodeMessage(o: {
   return `📦 ${o.storeName}\nتم إضافة منتج جديد بالباركود: ${o.barcode}\nالاسم المؤقت: «منتج-${o.barcode}»\nأكمل بياناته من إدارة المنتجات.`;
 }
 
+export function newProductsBatchMessage(o: {
+  storeName: string;
+  count: number;
+}): string {
+  return `📦 ${o.storeName}\nتم إضافة ${nf.format(o.count)} منتج جديد بالباركود.\nأكمل بياناتهم من إدارة المنتجات.`;
+}
+
 // Owner-triggered "please back me up" request sent to the admin's Telegram.
 export function backupRequestMessage(o: {
   storeName: string;

@@ -360,6 +360,20 @@
   color: var(--on-surface);
   text-align: center;
 }
+.tileBadge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #92600a;
+  background: #fdf2d6;
+  border: 1px solid #f1d999;
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  text-align: center;
+  max-inline-size: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* debt row */
 .debtRow {

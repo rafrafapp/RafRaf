@@ -2,18 +2,20 @@
 
 import { useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { productSchema } from "@/lib/validation/product";
-import { getDb } from "@/lib/offline/db";
+import { getDb, type LocalProduct } from "@/lib/offline/db";
 import {
   saveProduct,
   stashProductImage,
   setProductImage,
+  clearProductImage,
 } from "@/lib/offline/products-repo";
 import { syncAll } from "@/lib/offline/sync";
-import { createUploadSignature } from "@/lib/cloudinary/actions";
+import { createUploadSignature, deleteImage } from "@/lib/cloudinary/actions";
 import {
   uploadSigned,
   buildDeliveryUrl,
@@ -21,6 +23,7 @@ import {
   PRODUCT_IMAGE_SIZE,
 } from "@/lib/cloudinary/upload-client";
 import { Spinner } from "@/components/Spinner";
+import { DeleteProductButton } from "./DeleteProductButton";
 import styles from "./product-form.module.css";
 
 const BarcodeScanner = dynamic(
@@ -32,7 +35,6 @@ const CameraCapture = dynamic(
   { ssr: false },
 );
 
-// The quick-add unit choices (in the requested order).
 const QUICK_UNITS = ["piece", "kg", "liter", "meter", "box", "dozen"] as const;
 
 function generateBarcode(): string {
@@ -47,6 +49,8 @@ type Props = {
   common: Dictionary["common"];
   currency: string;
   locale: Locale;
+  mode?: "create" | "edit";
+  initial?: LocalProduct;
 };
 
 export function QuickAddForm({
@@ -54,31 +58,36 @@ export function QuickAddForm({
   products,
   common,
   currency,
+  mode = "create",
+  initial,
 }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const isEdit = mode === "edit";
 
-  // Required fields
-  const [name, setName] = useState("");
-  const [cost, setCost] = useState("");
-  const [sell, setSell] = useState("");
-  const [stock, setStock] = useState("");
-  const [minStock, setMinStock] = useState("");
-  const [minTouched, setMinTouched] = useState(false);
-  const [unit, setUnit] = useState(""); // kept across saves
+  const [name, setName] = useState(initial?.name ?? "");
+  const [cost, setCost] = useState(initial ? String(initial.cost_price) : "");
+  const [sell, setSell] = useState(initial ? String(initial.sell_price) : "");
+  const [stock, setStock] = useState(initial ? String(initial.stock) : "");
+  const [minStock, setMinStock] = useState(initial ? String(initial.min_stock) : "");
+  const [minTouched, setMinTouched] = useState(isEdit);
+  const [unit, setUnit] = useState(initial?.unit ?? "");
   const [nameError, setNameError] = useState(false);
 
-  // Optional (collapsed) section
-  const [optionalOpen, setOptionalOpen] = useState(false);
-  const [nameEn, setNameEn] = useState("");
-  const [category, setCategory] = useState(""); // kept across saves
+  // Auto-open optional section in edit mode when there's data there
+  const [optionalOpen, setOptionalOpen] = useState(
+    isEdit && Boolean(initial?.name_en || initial?.category || initial?.image_url),
+  );
+  const [nameEn, setNameEn] = useState(initial?.name_en ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "");
   const [catOpen, setCatOpen] = useState(false);
-  const [barcode, setBarcode] = useState("");
+  const [barcode, setBarcode] = useState(initial?.barcode ?? "");
   const [scanning, setScanning] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
 
-  // Image
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(initial?.image_url ?? null);
+  const [removeExisting, setRemoveExisting] = useState(false);
   const [imgError, setImgError] = useState<string | null>(null);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -90,7 +99,6 @@ export function QuickAddForm({
   const img = products.image as Record<string, string>;
   const qa = products.quickAdd;
 
-  // Existing categories (for the smart search).
   const allCats =
     useLiveQuery(
       async () => {
@@ -117,7 +125,6 @@ export function QuickAddForm({
   );
   const exactCat = allCats.some((c) => c.toLowerCase() === catQuery);
 
-  // Auto-suggest حد التنبيه = 10% of stock (min 1) until the user edits it.
   function onStockChange(v: string) {
     setStock(v);
     if (minTouched) return;
@@ -138,10 +145,27 @@ export function QuickAddForm({
       return;
     }
     setImageFile(file);
+    setRemoveExisting(false);
     setPreview(URL.createObjectURL(file));
   }
 
+  function onRemoveImage() {
+    setImageFile(null);
+    setPreview(null);
+    setRemoveExisting(true);
+    setImgError(null);
+  }
+
   async function applyImage(productId: string): Promise<void> {
+    if (isEdit && removeExisting && !imageFile) {
+      if (initial?.image_url || initial?.image_public_id) {
+        await clearProductImage(productId);
+        if (initial?.image_public_id) {
+          try { await deleteImage(initial.image_public_id); } catch { /* best-effort */ }
+        }
+      }
+      return;
+    }
     if (!imageFile) return;
     const online = typeof navigator === "undefined" || navigator.onLine;
     if (online) {
@@ -149,29 +173,22 @@ export function QuickAddForm({
         const sig = await createUploadSignature("product");
         if (sig) {
           setUploadPct(0);
-          const { publicId, version } = await uploadSigned(
-            imageFile,
-            sig,
-            setUploadPct,
-          );
-          const url = buildDeliveryUrl(
-            publicId,
-            version,
-            PRODUCT_IMAGE_SIZE,
-            PRODUCT_IMAGE_SIZE,
-          );
+          const { publicId, version } = await uploadSigned(imageFile, sig, setUploadPct);
+          const url = buildDeliveryUrl(publicId, version, PRODUCT_IMAGE_SIZE, PRODUCT_IMAGE_SIZE);
           await setProductImage(productId, url, publicId);
+          if (isEdit && initial?.image_public_id && initial.image_public_id !== publicId) {
+            try { await deleteImage(initial.image_public_id); } catch { /* best-effort */ }
+          }
           setUploadPct(null);
           return;
         }
       } catch {
-        setUploadPct(null); // fall through → stash for sync
+        setUploadPct(null);
       }
     }
     await stashProductImage(merchantId, productId, imageFile);
   }
 
-  // Reset for the next product, KEEPING unit + category (per spec).
   function resetForNext() {
     setName("");
     setCost("");
@@ -187,6 +204,7 @@ export function QuickAddForm({
     setUploadPct(null);
     setNameError(false);
     setError(null);
+    setRemoveExisting(false);
   }
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -204,14 +222,13 @@ export function QuickAddForm({
       barcode,
       category,
       subcategory: "",
-      // Empty number fields default to 0 (inputs start blank).
       cost_price: cost || "0",
       sell_price: sell || "0",
       stock: stock || "0",
       min_stock: minStock || "0",
       unit,
       notes: "",
-      custom_fields: {},
+      custom_fields: isEdit ? (initial?.custom_fields ?? {}) : {},
     });
     if (!parsed.success) {
       setError(products.errors.invalid);
@@ -220,14 +237,23 @@ export function QuickAddForm({
 
     startTransition(async () => {
       try {
-        const id = await saveProduct({ mode: "create", merchantId, data: parsed.data });
+        const id = await saveProduct({
+          mode: isEdit ? "edit" : "create",
+          merchantId,
+          base: isEdit ? initial : undefined,
+          data: parsed.data,
+        });
         await applyImage(id);
         void syncAll(merchantId).catch(() => {});
-        resetForNext(); // keeps unit + category
-        setToast(true);
-        if (typeof window !== "undefined")
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        setTimeout(() => setToast(false), 2200);
+        if (isEdit) {
+          router.push("/products");
+        } else {
+          resetForNext();
+          setToast(true);
+          if (typeof window !== "undefined")
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          setTimeout(() => setToast(false), 2200);
+        }
       } catch {
         setError(products.errors.failed);
       }
@@ -244,7 +270,6 @@ export function QuickAddForm({
         </p>
       )}
 
-      {/* Name (AR) — required, full width */}
       <label className={styles.label}>
         {products.fields.name}
         <input
@@ -262,7 +287,6 @@ export function QuickAddForm({
         )}
       </label>
 
-      {/* Cost + Sell (50/50) */}
       <div className={styles.row}>
         <label className={styles.label}>
           {products.fields.costPrice} ({currency})
@@ -292,7 +316,6 @@ export function QuickAddForm({
         </label>
       </div>
 
-      {/* Stock + Min-stock (50/50) */}
       <div className={styles.row}>
         <label className={styles.label}>
           {products.fields.stock}
@@ -322,13 +345,12 @@ export function QuickAddForm({
               setMinStock(e.target.value);
             }}
           />
-          {stock.trim() !== "" && (
+          {stock.trim() !== "" && !isEdit && (
             <span className={styles.hintPill}>{qa.minStockHint}</span>
           )}
         </label>
       </div>
 
-      {/* Barcode + scan — always visible (main section, not the optional drawer) */}
       <label className={styles.label}>
         {products.fields.barcode}{" "}
         <span className={styles.muted}>({common.optional})</span>
@@ -357,7 +379,6 @@ export function QuickAddForm({
         </span>
       </label>
 
-      {/* Unit */}
       <label className={styles.label}>
         {products.fields.unit}
         <select
@@ -374,7 +395,6 @@ export function QuickAddForm({
         </select>
       </label>
 
-      {/* Optional (collapsed) */}
       <button
         type="button"
         className={styles.optionalToggle}
@@ -398,7 +418,6 @@ export function QuickAddForm({
             />
           </label>
 
-          {/* Category — smart search / add */}
           <div className={styles.label}>
             {products.fields.category}{" "}
             <span className={styles.muted}>({common.optional})</span>
@@ -448,7 +467,6 @@ export function QuickAddForm({
             </div>
           </div>
 
-          {/* Image */}
           <div className={styles.label}>
             {img.label} <span className={styles.muted}>({common.optional})</span>
             <div className={styles.imageRow}>
@@ -493,10 +511,7 @@ export function QuickAddForm({
                   <button
                     type="button"
                     className={styles.removeImg}
-                    onClick={() => {
-                      setImageFile(null);
-                      setPreview(null);
-                    }}
+                    onClick={onRemoveImage}
                   >
                     {img.remove}
                   </button>
@@ -527,10 +542,23 @@ export function QuickAddForm({
             <Spinner />
             {products.saving}
           </>
+        ) : isEdit ? (
+          qa.editSave
         ) : (
           qa.saveAnother
         )}
       </button>
+
+      {isEdit && initial && (
+        <div className={styles.deleteWrap}>
+          <DeleteProductButton
+            id={initial.id}
+            merchantId={merchantId}
+            label={products.delete}
+            confirmText={products.deleteConfirm}
+          />
+        </div>
+      )}
 
       {scanning && (
         <BarcodeScanner

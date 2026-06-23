@@ -362,6 +362,11 @@ export function DashboardView({
                 <tile.Icon size={30} />
               </span>
               <span className={styles.tileLabel}>{d.tiles[tile.key]}</span>
+              {tile.key === "products" && incompleteCount > 0 && (
+                <span className={styles.tileBadge}>
+                  {nf.format(incompleteCount)} {(d as Record<string, unknown>).incompleteTileHint as string ?? "تحتاج إكمال"}
+                </span>
+              )}
             </Link>
           ))}
         </section>

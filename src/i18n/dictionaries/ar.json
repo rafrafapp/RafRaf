@@ -151,6 +151,7 @@
     "noActivity": "لا يوجد نشاط بعد",
     "noAlerts": "المخزون بحالة جيدة ✓",
     "incompleteProducts": "منتجات بحاجة لإكمال البيانات",
+    "incompleteTileHint": "تحتاج إكمال",
     "noDebtors": "لا توجد ديون مستحقة ✓",
     "manualSync": "مزامنة",
     "newSaleInvoice": "فاتورة بيع جديدة",
@@ -292,7 +293,8 @@
       "searchCategory": "ابحث أو أضف فئة",
       "addCategory": "إضافة «{q}» كفئة",
       "saveAnother": "حفظ وإضافة منتج آخر +",
-      "saved": "تم حفظ المنتج ✅"
+      "saved": "تم حفظ المنتج ✅",
+      "editSave": "حفظ التعديلات"
     },
     "customFields": {
       "expiry": "تاريخ الانتهاء",
@@ -451,11 +453,17 @@
         "hint": "الباركود غير موجود. أكمل البيانات الأساسية:",
         "barcodeLabel": "الباركود",
         "priceLabel": "سعر البيع *",
-        "qtyLabel": "الكمية",
+        "qtyLabel": "الكمية بالمخزون",
         "save": "حفظ وإضافة للسلة",
         "saving": "جاري الحفظ...",
         "cancel": "إلغاء"
-      }
+      },
+      "summarySale": "ملخص البيع",
+      "summaryConfirm": "تأكيد البيع ✓",
+      "summaryDiscount": "خصم %",
+      "summaryNote": "ملاحظة",
+      "successTitle": "تم البيع ✅",
+      "successSubtitle": "سُجّل بنجاح"
     },
     "party": {
       "add": "إضافة «{q}»",
