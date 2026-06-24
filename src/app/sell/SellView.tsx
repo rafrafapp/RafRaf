@@ -28,8 +28,8 @@ import {
 } from "@/lib/messaging/actions";
 import styles from "./sell.module.css";
 
-const BarcodeScanner = dynamic(
-  () => import("@/components/BarcodeScanner").then((m) => m.BarcodeScanner),
+const InlineScanner = dynamic(
+  () => import("./InlineScanner").then((m) => m.InlineScanner),
   { ssr: false },
 );
 
@@ -66,7 +66,6 @@ export function SellView({
   tx,
   common,
   syncLabels,
-  scanLabels,
 }: Props) {
   const { online } = useSync(merchantId);
   const s = tx.sell;
@@ -126,7 +125,7 @@ export function SellView({
   // ── Swipe tracking ──
   const touchStartX = useRef<number | null>(null);
 
-  // ── All products from IndexedDB ──
+  // ── Products from IndexedDB ──
   const all = useLiveQuery(
     () =>
       getDb()
@@ -136,8 +135,7 @@ export function SellView({
     [merchantId],
   );
   const products = useMemo(
-    () =>
-      (all ?? []).sort((a, b) => a.name.localeCompare(b.name, "ar")),
+    () => (all ?? []).sort((a, b) => a.name.localeCompare(b.name, "ar")),
     [all],
   );
 
@@ -222,14 +220,19 @@ export function SellView({
     if (delta < -75) removeLineAnimated(index);
   }
 
-  // ── Scanner ──
+  function closeScanner() {
+    setScanning(false);
+    setScanAfterSheet(false);
+  }
+
+  // ── Barcode detection ──
   function onDetected(code: string) {
     const exact = products.find((p) => p.barcode === code);
     if (exact) {
       doAdd(exact);
-      // scanner stays open (continuous mode)
+      // scanner stays open (continuous)
     } else {
-      setScanning(false);
+      closeScanner();
       setScanAfterSheet(true);
       setUnknownBarcode(code);
       setNewPrice("");
@@ -373,7 +376,6 @@ export function SellView({
       const invoiceNo = formatInvoiceNo(buildInvoiceNumbers(allTx).get(group));
       const total = lines.reduce((sum, l) => sum + l.total, 0);
 
-      // Reset cart + summary state
       const barcodes = [...newBarcodeProducts];
       setCart([]);
       setNewBarcodeProducts([]);
@@ -383,13 +385,7 @@ export function SellView({
       setSummaryNote("");
       setSummaryDiscount("");
 
-      // Fire-and-forget notifications + sync
-      void notifySale({
-        invoiceNo,
-        total,
-        currency,
-        payment: summaryPayment,
-      }).catch(() => {});
+      void notifySale({ invoiceNo, total, currency, payment: summaryPayment }).catch(() => {});
       if (barcodes.length > 0) {
         void notifyNewProductsBatch(barcodes).catch(() => {});
       }
@@ -402,7 +398,6 @@ export function SellView({
       }
       void syncAll(merchantId).catch(() => {});
 
-      // Success flash → receipt
       setSuccessFlash(true);
       setTimeout(() => {
         setSuccessFlash(false);
@@ -419,6 +414,7 @@ export function SellView({
   // ── Render ──
   return (
     <div className={styles.page} dir="rtl">
+
       {/* Toast */}
       {toast && (
         <div className={styles.toast} role="status" aria-live="polite">
@@ -447,28 +443,62 @@ export function SellView({
         </Link>
       </header>
 
-      {/* ── 2. SCAN BUTTON ── */}
-      <button
-        type="button"
-        className={styles.scanBtn}
-        onClick={() => setScanning(true)}
-        aria-label={s.scan}
-      >
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M3 9V5a2 2 0 0 1 2-2h2M3 15v4a2 2 0 0 0 2 2h2M21 9V5a2 2 0 0 0-2-2h-2M21 15v4a2 2 0 0 1-2 2h-2M7 8v8M10 8v8M13 8v8M16 8v8" />
-        </svg>
-        {s.scan} — {(s as Record<string, unknown>).scanEmpty as string ?? "امسح الباركود"}
-      </button>
+      {/* ── 2. SCAN AREA ── */}
+      <div className={styles.scanArea}>
+        {scanning ? (
+          <>
+            {/* Inline viewfinder */}
+            <div className={styles.viewfinder} aria-label="ماسح الباركود">
+              <InlineScanner
+                className={styles.viewfinderCamera}
+                onDetected={onDetected}
+                onClose={closeScanner}
+              />
+              {/* Corner brackets */}
+              <div className={`${styles.bracket} ${styles.bracketTR}`} aria-hidden="true" />
+              <div className={`${styles.bracket} ${styles.bracketTL}`} aria-hidden="true" />
+              <div className={`${styles.bracket} ${styles.bracketBR}`} aria-hidden="true" />
+              <div className={`${styles.bracket} ${styles.bracketBL}`} aria-hidden="true" />
+              {/* Scan line */}
+              <div className={styles.scanLine} aria-hidden="true" />
+              {/* Hint */}
+              <div className={styles.viewfinderHint}>وجّه الكاميرا نحو الباركود</div>
+            </div>
+            {/* Stop button */}
+            <button
+              type="button"
+              className={styles.stopBtn}
+              onClick={closeScanner}
+            >
+              ✕ إيقاف المسح
+            </button>
+          </>
+        ) : (
+          /* Idle: full-width navy button */
+          <button
+            type="button"
+            className={styles.scanBtn}
+            onClick={() => setScanning(true)}
+            aria-label={s.scan}
+          >
+            {/* Barcode scanner icon */}
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 9V5a2 2 0 0 1 2-2h2M3 15v4a2 2 0 0 0 2 2h2M21 9V5a2 2 0 0 0-2-2h-2M21 15v4a2 2 0 0 1-2 2h-2M7 8v8M10 8v8M13 8v8M16 8v8" />
+            </svg>
+            امسح باركود
+          </button>
+        )}
+      </div>
 
       {/* Offline strip */}
       {!online && (
@@ -480,7 +510,7 @@ export function SellView({
       {/* ── 3. MAIN AREA ── */}
       <div className={styles.main}>
 
-        {/* CART SECTION */}
+        {/* CART SECTION — only shown when cart has items */}
         {cart.length > 0 && (
           <div className={styles.cartSection}>
             <span className={styles.sectionLabel}>السلة</span>
@@ -496,11 +526,11 @@ export function SellView({
                     className={`${styles.cartItemSlide}${removingIdx === i ? ` ${styles.removing}` : ""}`}
                   >
                     <div className={styles.cartItem}>
-                      {/* RTL stepper: [+] → right, [−] → left */}
+                      {/* Stepper — RTL: [+] first child → right side */}
                       <div className={styles.stepper}>
                         <button
                           type="button"
-                          className={styles.stepBtn}
+                          className={styles.stepBtnPlus}
                           onClick={() => updateQty(i, l.qty + 1)}
                           aria-label="زيادة"
                         >
@@ -519,23 +549,23 @@ export function SellView({
                         />
                         <button
                           type="button"
-                          className={styles.stepBtn}
+                          className={styles.stepBtnMinus}
                           onClick={() => updateQty(i, l.qty - 1)}
                           aria-label="تقليل"
                         >
                           −
                         </button>
                       </div>
+                      {/* Item info — left side in RTL */}
                       <div className={styles.cartItemInfo}>
-                        <span className={styles.cartName}>{safeDisplay(l.product_name)}</span>
-                        <span className={styles.cartTotal}>
+                        <div className={styles.cartName}>{safeDisplay(l.product_name)}</div>
+                        <div className={styles.cartTotal}>
                           {nf.format(lineTotal(l))} {currency}
-                        </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                {i < cart.length - 1 && <hr className={styles.cartDivider} />}
               </div>
             ))}
           </div>
@@ -544,11 +574,11 @@ export function SellView({
         {/* PRODUCTS SECTION */}
         <div className={styles.productsSection}>
           <div className={styles.productsHeader}>
-            <span className={styles.sectionLabel}>كل المنتجات</span>
+            <span className={styles.sectionLabel}>المنتجات</span>
             <div className={styles.searchBar}>
               <svg
-                width="16"
-                height="16"
+                width="18"
+                height="18"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -600,29 +630,29 @@ export function SellView({
 
                 return (
                   <div key={p.id} className={styles.productRow}>
-                    {/* [+] — first child in RTL → right side */}
+                    {/* [+] or ✓ — first child in RTL → right side */}
                     <button
                       type="button"
                       className={`${styles.addBtn}${inCart ? ` ${styles.addBtnInCart}` : ""}`}
-                      onClick={() => doAdd(p)}
-                      aria-label={`${s.add} ${p.name}`}
+                      onClick={() => { if (!inCart) doAdd(p); }}
+                      aria-label={inCart ? `${p.name} في السلة` : `${s.add} ${p.name}`}
+                      disabled={inCart}
                     >
-                      +
+                      {inCart ? "✓" : "+"}
                     </button>
                     <div className={styles.productInfo}>
-                      <span className={styles.productName}>{safeDisplay(p.name)}</span>
+                      <div className={styles.productName}>{safeDisplay(p.name)}</div>
                       <div className={styles.productMeta}>
                         <span className={styles.productPrice}>
                           {nf.format(Number(p.sell_price))} {currency}
                         </span>
-                        <span
-                          className={`${styles.stockBadge} ${out ? styles.badgeOut : low ? styles.badgeLow : styles.badgeOk}`}
-                        >
-                          {nf.format(stock)}
+                        <span>•</span>
+                        <span className={out ? styles.stockOut : low ? styles.stockLow : styles.stockOk}>
+                          {nf.format(stock)} متوفر
                         </span>
                         {inCart && (
                           <span className={styles.inCartBadge}>
-                            في السلة ({cartQty})
+                            في السلة{cartQty > 1 ? ` (${cartQty})` : ""}
                           </span>
                         )}
                       </div>
@@ -638,13 +668,16 @@ export function SellView({
       {/* ── 4. BOTTOM BAR ── */}
       <div className={styles.bottomBar}>
         <div className={styles.bottomMeta}>
-          <span className={styles.totalAmt}>
-            {cart.length > 0 ? `${nf.format(cartTotal)} ${currency}` : "—"}
-          </span>
+          <div className={styles.totalGroup}>
+            <div className={styles.totalLabel}>الإجمالي</div>
+            <div className={styles.totalAmt}>
+              {cart.length > 0 ? `${nf.format(cartTotal)} ${currency}` : "—"}
+            </div>
+          </div>
           {cart.length > 0 && (
-            <span className={styles.itemCount}>
-              {nf.format(cart.length)}{" "}
-              {(s as Record<string, unknown>).cartItems as string ?? "منتج في السلة"}
+            <span className={styles.itemCountChip}>
+              {nf.format(cart.reduce((s, l) => s + l.qty, 0))}{" "}
+              {(s as Record<string, unknown>).cartItems as string ?? "عناصر"}
             </span>
           )}
         </div>
@@ -655,38 +688,18 @@ export function SellView({
           disabled={saving || cart.length === 0}
         >
           {saving ? (
-            <>
-              <Spinner />
-              {s.completing}
-            </>
+            <><Spinner />{s.completing}</>
           ) : (
-            <>
-              ← {(s as Record<string, unknown>).confirmSale as string ?? s.complete}
-            </>
+            <>إتمام البيع <span aria-hidden>←</span></>
           )}
         </button>
       </div>
-
-      {/* ── SCANNER (continuous) ── */}
-      {scanning && (
-        <BarcodeScanner
-          continuous
-          onDetected={onDetected}
-          onClose={() => {
-            setScanning(false);
-            setScanAfterSheet(false);
-          }}
-          labels={scanLabels}
-        />
-      )}
 
       {/* ── UNKNOWN BARCODE SHEET ── */}
       {unknownBarcode && (
         <div
           className={styles.backdrop}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeUnknownSheet();
-          }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeUnknownSheet(); }}
           role="dialog"
           aria-modal="true"
         >
@@ -735,11 +748,7 @@ export function SellView({
             </div>
 
             <div className={styles.sheetActions}>
-              <button
-                type="button"
-                className={styles.btnGhost}
-                onClick={closeUnknownSheet}
-              >
+              <button type="button" className={styles.btnGhost} onClick={closeUnknownSheet}>
                 {ub?.cancel ?? common.cancel}
               </button>
               <button
@@ -761,9 +770,7 @@ export function SellView({
       {summaryOpen && (
         <div
           className={styles.summaryBackdrop}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSummaryOpen(false);
-          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setSummaryOpen(false); }}
           role="dialog"
           aria-modal="true"
         >
@@ -782,7 +789,6 @@ export function SellView({
               </button>
             </div>
 
-            {/* Items list */}
             <div className={styles.summaryItemsList}>
               {cart.map((l, i) => (
                 <div key={i} className={styles.summaryItem}>
@@ -795,7 +801,6 @@ export function SellView({
 
             <hr className={styles.divider} />
 
-            {/* Total */}
             <div className={styles.summaryTotalRow}>
               <span className={styles.summaryTotalLabel}>{s.total}</span>
               <span className={styles.summaryTotalAmt}>
@@ -809,7 +814,6 @@ export function SellView({
               </div>
             )}
 
-            {/* Discount */}
             <label className={styles.fieldLabel}>
               {(s as Record<string, unknown>).summaryDiscount as string ?? "خصم %"}
               <input
@@ -826,7 +830,6 @@ export function SellView({
               />
             </label>
 
-            {/* Payment method */}
             <div>
               <span className={styles.optLabel}>{s.payment}</span>
               <div className={styles.segment}>
@@ -843,7 +846,6 @@ export function SellView({
               </div>
             </div>
 
-            {/* Customer picker */}
             <div>
               <span className={styles.optLabel}>{s.customer}</span>
               <PartyPicker
@@ -861,7 +863,6 @@ export function SellView({
               />
             </div>
 
-            {/* Partial paid */}
             {summaryPayment === "partial" && (
               <label className={styles.fieldLabel}>
                 {s.paidNow} ({currency})
@@ -892,7 +893,6 @@ export function SellView({
               </div>
             )}
 
-            {/* Note */}
             <textarea
               className={styles.textarea}
               placeholder={(s as Record<string, unknown>).summaryNote as string ?? "ملاحظة"}
@@ -901,18 +901,15 @@ export function SellView({
               onChange={(e) => setSummaryNote(e.target.value)}
             />
 
-            {/* Confirm */}
             <button
               type="button"
               className={styles.confirmBtn}
               onClick={() => void proceedFromSummary()}
               disabled={saving}
             >
-              {saving ? (
-                <><Spinner />{s.completing}</>
-              ) : (
-                (s as Record<string, unknown>).summaryConfirm as string ?? "تأكيد البيع ✓"
-              )}
+              {saving
+                ? <><Spinner />{s.completing}</>
+                : ((s as Record<string, unknown>).summaryConfirm as string ?? "تأكيد البيع ✓")}
             </button>
           </div>
         </div>
@@ -939,11 +936,7 @@ export function SellView({
             </div>
             <p className={styles.warnQ}>{s.oversellQuestion}</p>
             <div className={styles.confirmActions}>
-              <button
-                type="button"
-                className={styles.btnGhost}
-                onClick={() => setOverdraw(null)}
-              >
+              <button type="button" className={styles.btnGhost} onClick={() => setOverdraw(null)}>
                 {s.oversellNo}
               </button>
               <button
