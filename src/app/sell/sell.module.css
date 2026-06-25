@@ -109,7 +109,7 @@
 /* Scanning state: inline viewfinder */
 .viewfinder {
   width: 100%;
-  height: 160px;
+  height: 200px;
   background: var(--inverse-surface);
   border-radius: 0.75rem;
   overflow: hidden;
@@ -184,6 +184,33 @@
   pointer-events: none;
 }
 
+/* Torch toggle button — top-left corner of viewfinder (inset-inline-end = left in RTL) */
+.torchBtn {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+  z-index: 4;
+  appearance: none;
+  border: 1.5px solid rgba(182,196,255,0.5);
+  background: rgba(47,48,54,0.75);
+  color: var(--scan-accent);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.torchBtn:active { background: rgba(47,48,54,0.95); }
+.torchBtnOn {
+  background: var(--scan-accent);
+  color: var(--inverse-surface);
+  border-color: var(--scan-accent);
+}
+
 /* "إيقاف المسح" outline button */
 .stopBtn {
   width: 100%;
@@ -216,23 +243,21 @@
   border-block-end: 1px solid #f1d999;
 }
 
-/* ── 3. MAIN AREA ── */
+/* ── 3. MAIN AREA (single scrollable column) ── */
 .main {
   flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+  padding: 0.75rem 1rem 0.75rem;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-  padding: 0.75rem 1rem 0;
   gap: 0.75rem;
 }
 
-/* ── CART SECTION (white card, auto height, max 38vh) ── */
+/* ── CART SECTION (white card, natural height — no capping) ── */
 .cartSection {
   flex: 0 0 auto;
-  max-height: 38vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   background: var(--white);
   border-radius: 0.75rem;
   border: 1px solid var(--border-card);
@@ -249,34 +274,26 @@
   border-block-end: 1px solid var(--surface-mid);
 }
 
-/* Swipe-to-delete */
-.cartItemWrap {
-  position: relative;
-  overflow: hidden;
-}
-
-.swipeDelete {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 68px;
+/* Trash icon button (last child in RTL → appears on LEFT) */
+.trashBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--error);
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
-  pointer-events: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+  -webkit-tap-highlight-color: transparent;
 }
-
-.cartItemSlide {
-  background: var(--white);
-  transition: transform 0.22s ease, opacity 0.22s ease;
-}
-.cartItemSlide.removing {
-  transform: translateX(-100%);
-  opacity: 0;
+.trashBtn:active {
+  color: var(--error);
+  background: rgba(186,26,26,0.08);
 }
 
 /* Cart item row: RTL flex — stepper first (right), info left */
@@ -379,17 +396,17 @@
 }
 .stepBtnMinus:active { background: var(--surface-mid); }
 
-/* ── PRODUCTS SECTION (white card, flex-1 with own scroll) ── */
+/* ── PRODUCTS SECTION (white card, natural height — scrolls with page) ── */
 .productsSection {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
   background: var(--white);
   border-radius: 0.75rem;
   border: 1px solid var(--border-card);
   box-shadow: 0 4px 12px rgba(30,58,138,0.05);
+  /* give products a comfortable minimum so they always show */
+  min-height: 280px;
 }
 
 .productsHeader {
@@ -442,8 +459,6 @@
 
 .productsList {
   flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Product row — RTL: [+] first child → right side */

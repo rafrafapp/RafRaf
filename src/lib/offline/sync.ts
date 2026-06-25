@@ -11,6 +11,7 @@ import {
 import { createUploadSignature, deleteImage } from "@/lib/cloudinary/actions";
 import {
   uploadSigned,
+  uploadUnsigned,
   buildDeliveryUrl,
   PRODUCT_IMAGE_SIZE,
 } from "@/lib/cloudinary/upload-client";
@@ -137,8 +138,9 @@ export async function pushPendingProductImages(
 
     try {
       const sig = await createUploadSignature("product");
-      if (!sig) return; // Cloudinary not configured → leave pending
-      const { publicId, version } = await uploadSigned(img.blob, sig);
+      const { publicId, version } = sig
+        ? await uploadSigned(img.blob, sig)
+        : await uploadUnsigned(img.blob, "rafraf/products");
       const url = buildDeliveryUrl(
         publicId,
         version,

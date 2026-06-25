@@ -82,10 +82,12 @@ export function SellView({
   // ── Search ──
   const [q, setQ] = useState("");
 
+  // ── Scanner torch ──
+  const [torch, setTorch] = useState(false);
+
   // ── UI feedback ──
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [removingIdx, setRemovingIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const busyRef = useRef(false);
 
@@ -121,9 +123,6 @@ export function SellView({
     date: string;
     invoiceNo: string;
   } | null>(null);
-
-  // ── Swipe tracking ──
-  const touchStartX = useRef<number | null>(null);
 
   // ── Products from IndexedDB ──
   const all = useLiveQuery(
@@ -195,34 +194,20 @@ export function SellView({
 
   function updateQty(index: number, qty: number) {
     if (qty <= 0) {
-      removeLineAnimated(index);
+      removeLine(index);
       return;
     }
     setCart((prev) => prev.map((l, i) => (i === index ? { ...l, qty } : l)));
   }
 
-  function removeLineAnimated(index: number) {
-    setRemovingIdx(index);
-    setTimeout(() => {
-      setCart((prev) => prev.filter((_, i) => i !== index));
-      setRemovingIdx(null);
-    }, 220);
-  }
-
-  function onTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX;
-  }
-
-  function onTouchEnd(e: React.TouchEvent, index: number) {
-    if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
-    if (delta < -75) removeLineAnimated(index);
+  function removeLine(index: number) {
+    setCart((prev) => prev.filter((_, i) => i !== index));
   }
 
   function closeScanner() {
     setScanning(false);
     setScanAfterSheet(false);
+    setTorch(false);
   }
 
   // ── Barcode detection ──
@@ -453,6 +438,7 @@ export function SellView({
                 className={styles.viewfinderCamera}
                 onDetected={onDetected}
                 onClose={closeScanner}
+                torch={torch}
               />
               {/* Corner brackets */}
               <div className={`${styles.bracket} ${styles.bracketTR}`} aria-hidden="true" />
@@ -462,7 +448,19 @@ export function SellView({
               {/* Scan line */}
               <div className={styles.scanLine} aria-hidden="true" />
               {/* Hint */}
-              <div className={styles.viewfinderHint}>وجّه الكاميرا نحو الباركود</div>
+              <div className={styles.viewfinderHint}>اضغط على الكاميرا للتركيز</div>
+              {/* Torch toggle */}
+              <button
+                type="button"
+                className={`${styles.torchBtn}${torch ? ` ${styles.torchBtnOn}` : ""}`}
+                onClick={(e) => { e.stopPropagation(); setTorch((t) => !t); }}
+                aria-label={torch ? "إيقاف الفلاش" : "تشغيل الفلاش"}
+              >
+                {/* Flashlight icon */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M18 6L6 18M9 3h6l-2 6h5L8 21l2-6H5L9 3z" />
+                </svg>
+              </button>
             </div>
             {/* Stop button */}
             <button
@@ -515,57 +513,58 @@ export function SellView({
           <div className={styles.cartSection}>
             <span className={styles.sectionLabel}>السلة</span>
             {cart.map((l, i) => (
-              <div key={i}>
-                <div
-                  className={styles.cartItemWrap}
-                  onTouchStart={onTouchStart}
-                  onTouchEnd={(e) => onTouchEnd(e, i)}
-                >
-                  <div className={styles.swipeDelete} aria-hidden>حذف</div>
-                  <div
-                    className={`${styles.cartItemSlide}${removingIdx === i ? ` ${styles.removing}` : ""}`}
+              <div key={i} className={styles.cartItem}>
+                {/* Stepper — RTL: [+] first child → right side */}
+                <div className={styles.stepper}>
+                  <button
+                    type="button"
+                    className={styles.stepBtnPlus}
+                    onClick={() => updateQty(i, l.qty + 1)}
+                    aria-label="زيادة"
                   >
-                    <div className={styles.cartItem}>
-                      {/* Stepper — RTL: [+] first child → right side */}
-                      <div className={styles.stepper}>
-                        <button
-                          type="button"
-                          className={styles.stepBtnPlus}
-                          onClick={() => updateQty(i, l.qty + 1)}
-                          aria-label="زيادة"
-                        >
-                          +
-                        </button>
-                        <input
-                          type="number"
-                          className={styles.stepNum}
-                          value={l.qty}
-                          min={0}
-                          step="any"
-                          inputMode="decimal"
-                          dir="ltr"
-                          onChange={(e) => updateQty(i, Number(e.target.value) || 0)}
-                          aria-label={s.qty}
-                        />
-                        <button
-                          type="button"
-                          className={styles.stepBtnMinus}
-                          onClick={() => updateQty(i, l.qty - 1)}
-                          aria-label="تقليل"
-                        >
-                          −
-                        </button>
-                      </div>
-                      {/* Item info — left side in RTL */}
-                      <div className={styles.cartItemInfo}>
-                        <div className={styles.cartName}>{safeDisplay(l.product_name)}</div>
-                        <div className={styles.cartTotal}>
-                          {nf.format(lineTotal(l))} {currency}
-                        </div>
-                      </div>
-                    </div>
+                    +
+                  </button>
+                  <input
+                    type="number"
+                    className={styles.stepNum}
+                    value={l.qty}
+                    min={0}
+                    step="any"
+                    inputMode="decimal"
+                    dir="ltr"
+                    onChange={(e) => updateQty(i, Number(e.target.value) || 0)}
+                    aria-label={s.qty}
+                  />
+                  <button
+                    type="button"
+                    className={styles.stepBtnMinus}
+                    onClick={() => updateQty(i, l.qty - 1)}
+                    aria-label="تقليل"
+                  >
+                    −
+                  </button>
+                </div>
+                {/* Item info */}
+                <div className={styles.cartItemInfo}>
+                  <div className={styles.cartName}>{safeDisplay(l.product_name)}</div>
+                  <div className={styles.cartTotal}>
+                    {nf.format(lineTotal(l))} {currency}
                   </div>
                 </div>
+                {/* Trash button — last child in RTL → appears on LEFT */}
+                <button
+                  type="button"
+                  className={styles.trashBtn}
+                  onClick={() => removeLine(i)}
+                  aria-label={`حذف ${l.product_name}`}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6M14 11v6" />
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                  </svg>
+                </button>
               </div>
             ))}
           </div>

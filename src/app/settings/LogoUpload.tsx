@@ -8,6 +8,7 @@ import {
 } from "@/lib/cloudinary/actions";
 import {
   uploadSigned,
+  uploadUnsigned,
   buildDeliveryUrl,
   validateImage,
   LOGO_IMAGE_SIZE,
@@ -45,11 +46,9 @@ export function LogoUpload({
     setPct(0);
     try {
       const sig = await createUploadSignature("logo");
-      if (!sig) {
-        setError(labels.notConfigured);
-        return;
-      }
-      const { publicId, version } = await uploadSigned(file, sig, setPct);
+      const { publicId, version } = sig
+        ? await uploadSigned(file, sig, setPct)
+        : await uploadUnsigned(file, "rafraf/logos", setPct);
       const newUrl = buildDeliveryUrl(
         publicId,
         version,

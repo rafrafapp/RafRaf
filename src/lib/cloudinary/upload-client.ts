@@ -1,6 +1,7 @@
-// Browser-only Cloudinary helpers. No secret here — the upload uses a server-
-// generated signature (see actions.createUploadSignature). Imported by the product
-// form (foreground upload + progress) and the sync engine (offline-stored images).
+// Browser-only Cloudinary helpers. Two upload paths:
+// 1. Signed:   server generates a signature; requires CLOUDINARY_API_SECRET on the server.
+// 2. Unsigned: uses NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET; no server secret needed.
+// Callers try signed first; fall back to unsigned when the server returns null.
 
 export type SignedUpload = {
   cloudName: string;
@@ -53,6 +54,48 @@ export function uploadSigned(
             public_id: string;
             version: number;
           };
+          resolve({ publicId: r.public_id, version: r.version });
+        } catch {
+          reject(new Error("cloudinary: bad response"));
+        }
+      } else {
+        reject(new Error(`cloudinary: upload failed (${xhr.status})`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("cloudinary: network error"));
+    xhr.send(form);
+  });
+}
+
+// Unsigned direct upload using NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET.
+// No server secret required. `folder` organises assets (e.g. "rafraf/products").
+export function uploadUnsigned(
+  blob: Blob,
+  folder: string,
+  onProgress?: (pct: number) => void,
+): Promise<UploadResult> {
+  const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+  const preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET?.trim();
+  if (!cloud || !preset) {
+    return Promise.reject(new Error("cloudinary: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME or NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET not set"));
+  }
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", blob);
+    form.append("upload_preset", preset);
+    form.append("folder", folder);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloud}/image/upload`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const r = JSON.parse(xhr.responseText) as { public_id: string; version: number };
           resolve({ publicId: r.public_id, version: r.version });
         } catch {
           reject(new Error("cloudinary: bad response"));

@@ -18,6 +18,7 @@ import { syncAll } from "@/lib/offline/sync";
 import { createUploadSignature, deleteImage } from "@/lib/cloudinary/actions";
 import {
   uploadSigned,
+  uploadUnsigned,
   buildDeliveryUrl,
   validateImage,
   PRODUCT_IMAGE_SIZE,
@@ -171,17 +172,17 @@ export function QuickAddForm({
     if (online) {
       try {
         const sig = await createUploadSignature("product");
-        if (sig) {
-          setUploadPct(0);
-          const { publicId, version } = await uploadSigned(imageFile, sig, setUploadPct);
-          const url = buildDeliveryUrl(publicId, version, PRODUCT_IMAGE_SIZE, PRODUCT_IMAGE_SIZE);
-          await setProductImage(productId, url, publicId);
-          if (isEdit && initial?.image_public_id && initial.image_public_id !== publicId) {
-            try { await deleteImage(initial.image_public_id); } catch { /* best-effort */ }
-          }
-          setUploadPct(null);
-          return;
+        setUploadPct(0);
+        const { publicId, version } = sig
+          ? await uploadSigned(imageFile, sig, setUploadPct)
+          : await uploadUnsigned(imageFile, "rafraf/products", setUploadPct);
+        const url = buildDeliveryUrl(publicId, version, PRODUCT_IMAGE_SIZE, PRODUCT_IMAGE_SIZE);
+        await setProductImage(productId, url, publicId);
+        if (isEdit && initial?.image_public_id && initial.image_public_id !== publicId) {
+          try { await deleteImage(initial.image_public_id); } catch { /* best-effort */ }
         }
+        setUploadPct(null);
+        return;
       } catch {
         setUploadPct(null);
       }
