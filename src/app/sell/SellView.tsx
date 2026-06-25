@@ -20,7 +20,7 @@ import { PAYMENT_METHODS } from "@/lib/validation/transaction";
 import { PartyPicker, type Party } from "@/components/PartyPicker";
 import { Receipt, type ReceiptLine } from "@/components/Receipt";
 import { Spinner } from "@/components/Spinner";
-import { safeDisplay } from "@/lib/validation/sanitize";
+import { safeDisplay, shortProductName } from "@/lib/validation/sanitize";
 import {
   notifyOversell,
   notifyNewProductsBatch,
@@ -91,10 +91,11 @@ export function SellView({
   const [saving, setSaving] = useState(false);
   const busyRef = useRef(false);
 
-  // ── Unknown barcode sheet ──
+  // ── Unknown barcode modal ──
   const [unknownBarcode, setUnknownBarcode] = useState<string | null>(null);
   const [newPrice, setNewPrice] = useState("");
   const [newQty, setNewQty] = useState("1");
+  const [newName, setNewName] = useState("");
   const [savingNew, setSavingNew] = useState(false);
 
   // ── New barcodes batch (Telegram at end of sale) ──
@@ -189,7 +190,7 @@ export function SellView({
         },
       ];
     });
-    showToast(`✅ ${safeDisplay(p.name)}`);
+    showToast(`✅ ${safeDisplay(shortProductName(p.name))}`);
   }
 
   function updateQty(index: number, qty: number) {
@@ -222,6 +223,7 @@ export function SellView({
       setUnknownBarcode(code);
       setNewPrice("");
       setNewQty("1");
+      setNewName("");
     }
   }
 
@@ -244,7 +246,7 @@ export function SellView({
         mode: "create",
         merchantId,
         data: {
-          name: `منتج-${unknownBarcode}`,
+          name: newName.trim() || `منتج-${unknownBarcode}`,
           name_en: undefined,
           barcode: unknownBarcode,
           category: undefined,
@@ -257,10 +259,11 @@ export function SellView({
           custom_fields: {},
         },
       });
+      const finalName = newName.trim() || `منتج-${unknownBarcode}`;
       const newProduct: LocalProduct = {
         id,
         merchant_id: merchantId,
-        name: `منتج-${unknownBarcode}`,
+        name: finalName,
         name_en: null,
         barcode: unknownBarcode,
         category: null,
@@ -546,7 +549,7 @@ export function SellView({
                 </div>
                 {/* Item info */}
                 <div className={styles.cartItemInfo}>
-                  <div className={styles.cartName}>{safeDisplay(l.product_name)}</div>
+                  <div className={styles.cartName}>{safeDisplay(shortProductName(l.product_name))}</div>
                   <div className={styles.cartTotal}>
                     {nf.format(lineTotal(l))} {currency}
                   </div>
@@ -640,7 +643,7 @@ export function SellView({
                       {inCart ? "✓" : "+"}
                     </button>
                     <div className={styles.productInfo}>
-                      <div className={styles.productName}>{safeDisplay(p.name)}</div>
+                      <div className={styles.productName}>{safeDisplay(shortProductName(p.name))}</div>
                       <div className={styles.productMeta}>
                         <span className={styles.productPrice}>
                           {nf.format(Number(p.sell_price))} {currency}
@@ -694,73 +697,85 @@ export function SellView({
         </button>
       </div>
 
-      {/* ── UNKNOWN BARCODE SHEET ── */}
+      {/* ── UNKNOWN BARCODE CENTERED MODAL ── */}
       {unknownBarcode && (
         <div
-          className={styles.backdrop}
+          className={styles.ubOverlay}
           onClick={(e) => { if (e.target === e.currentTarget) closeUnknownSheet(); }}
           role="dialog"
           aria-modal="true"
+          aria-label={ub?.title ?? "منتج جديد"}
         >
-          <div className={styles.sheet}>
-            <h2 className={styles.sheetTitle}>{ub?.title ?? "منتج جديد 🆕"}</h2>
-            <p className={styles.sheetHint}>{ub?.hint ?? "الباركود غير موجود:"}</p>
+          <div className={styles.ubModal}>
+            {/* X close — top left (inset-inline-end in RTL = visual left) */}
+            <button
+              type="button"
+              className={styles.ubClose}
+              onClick={closeUnknownSheet}
+              aria-label={common.cancel}
+            >
+              ✕
+            </button>
 
+            <h2 className={styles.ubTitle}>{ub?.title ?? "منتج جديد 🆕"}</h2>
+            <span className={styles.ubBarcode}>{unknownBarcode}</span>
+
+            {/* سعر البيع */}
             <label className={styles.fieldLabel}>
-              {ub?.barcodeLabel ?? "الباركود"}
+              {ub?.priceLabel ?? "سعر البيع *"}
               <input
-                className={styles.inputReadonly}
-                readOnly
-                value={unknownBarcode}
+                className={styles.input}
+                type="number"
+                min={0}
+                step="any"
+                inputMode="decimal"
+                dir="ltr"
+                placeholder="0"
+                value={newPrice}
+                onChange={(e) => setNewPrice(e.target.value)}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
               />
             </label>
 
-            <div className={styles.fieldRow}>
-              <label className={styles.fieldLabel}>
-                {ub?.priceLabel ?? "سعر البيع *"}
-                <input
-                  className={styles.input}
-                  type="number"
-                  min={0}
-                  step="any"
-                  inputMode="decimal"
-                  dir="ltr"
-                  placeholder="0"
-                  value={newPrice}
-                  onChange={(e) => setNewPrice(e.target.value)}
-                  autoFocus
-                />
-              </label>
-              <label className={styles.fieldLabel}>
-                {ub?.qtyLabel ?? "الكمية بالمخزون"}
-                <input
-                  className={styles.input}
-                  type="number"
-                  min={1}
-                  step="1"
-                  inputMode="numeric"
-                  dir="ltr"
-                  value={newQty}
-                  onChange={(e) => setNewQty(e.target.value)}
-                />
-              </label>
-            </div>
+            {/* الكمية */}
+            <label className={styles.fieldLabel}>
+              {ub?.qtyLabel ?? "الكمية"}
+              <input
+                className={styles.input}
+                type="number"
+                min={1}
+                step="1"
+                inputMode="numeric"
+                dir="ltr"
+                value={newQty}
+                onChange={(e) => setNewQty(e.target.value)}
+              />
+            </label>
 
-            <div className={styles.sheetActions}>
-              <button type="button" className={styles.btnGhost} onClick={closeUnknownSheet}>
-                {ub?.cancel ?? common.cancel}
-              </button>
-              <button
-                type="button"
-                className={styles.btnPrimary}
-                onClick={() => void saveNewProduct()}
-                disabled={savingNew || !newPrice}
-              >
-                {savingNew
-                  ? <><Spinner />{ub?.saving ?? "جارٍ..."}</>
-                  : (ub?.save ?? "حفظ وأضف للسلة")}
-              </button>
-            </div>
+            {/* اسم المنتج (اختياري) */}
+            <label className={styles.fieldLabel}>
+              {ub?.nameLabel ?? "اسم المنتج (اختياري)"}
+              <input
+                className={styles.input}
+                type="text"
+                placeholder={ub?.namePlaceholder ?? "يُملأ لاحقاً إن تُرك فارغاً"}
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void saveNewProduct(); }}
+              />
+            </label>
+
+            <button
+              type="button"
+              className={styles.ubSaveBtn}
+              onClick={() => void saveNewProduct()}
+              disabled={savingNew || !newPrice}
+            >
+              {savingNew
+                ? <><Spinner />{ub?.saving ?? "جارٍ..."}</>
+                : (ub?.save ?? "حفظ وأضف للسلة")}
+            </button>
           </div>
         </div>
       )}
@@ -791,7 +806,7 @@ export function SellView({
             <div className={styles.summaryItemsList}>
               {cart.map((l, i) => (
                 <div key={i} className={styles.summaryItem}>
-                  <span className={styles.siName}>{safeDisplay(l.product_name)}</span>
+                  <span className={styles.siName}>{safeDisplay(shortProductName(l.product_name))}</span>
                   <span className={styles.siQty}>× {nf.format(l.qty)}</span>
                   <span className={styles.siAmt}>{nf.format(lineTotal(l))}</span>
                 </div>

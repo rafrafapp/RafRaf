@@ -362,7 +362,8 @@
       "save": "Save",
       "saving": "...",
       "saved": "Saved",
-      "badge": "Incomplete"
+      "badge": "Incomplete",
+      "completeData": "Complete data →"
     }
   },
   "transactions": {

@@ -66,7 +66,11 @@ export function QuickAddForm({
   const [pending, startTransition] = useTransition();
   const isEdit = mode === "edit";
 
-  const [name, setName] = useState(initial?.name ?? "");
+  // Auto-generated barcode-scan names ("منتج-BARCODE") should start empty so the
+  // merchant fills in a real name when completing the product data.
+  const [name, setName] = useState(
+    initial?.name?.startsWith("منتج-") ? "" : (initial?.name ?? ""),
+  );
   const [cost, setCost] = useState(initial ? String(initial.cost_price) : "");
   const [sell, setSell] = useState(initial ? String(initial.sell_price) : "");
   const [stock, setStock] = useState(initial ? String(initial.stock) : "");

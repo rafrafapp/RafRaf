@@ -362,7 +362,8 @@
       "save": "حفظ",
       "saving": "...",
       "saved": "تم",
-      "badge": "ناقص"
+      "badge": "ناقص",
+      "completeData": "أكمل البيانات ←"
     }
   },
   "transactions": {

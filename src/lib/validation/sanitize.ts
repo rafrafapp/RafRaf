@@ -43,6 +43,18 @@ export function escapeHtml(s: string): string {
   );
 }
 
+// Convert auto-generated barcode-scan names ("منتج-BARCODE") to a short display
+// form "منتج · ...XXXXXX" (last 6 chars of the barcode). Used everywhere for display
+// so the raw key never surfaces to the merchant. Returns the name unchanged for
+// normal products.
+export function shortProductName(name: string): string {
+  const PREFIX = "منتج-";
+  if (!name.startsWith(PREFIX)) return name;
+  const barcode = name.slice(PREFIX.length);
+  const tail = barcode.slice(-6);
+  return `منتج · ...${tail}`;
+}
+
 // Whitelist for name-ish fields: any character EXCEPT angle brackets (the tag
 // vector). Allows real brand names (Nestle, Cafe), accents, Arabic, emoji, spaces,
 // hyphens. The DB CHECK and sanitizeString remove actual tags/markup.

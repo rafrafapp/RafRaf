@@ -1,117 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { getDb, type LocalProduct } from "@/lib/offline/db";
-import { saveProduct } from "@/lib/offline/products-repo";
-import { syncAll } from "@/lib/offline/sync";
 import { useSync } from "@/lib/offline/useSync";
-import { safeDisplay } from "@/lib/validation/sanitize";
+import { safeDisplay, shortProductName } from "@/lib/validation/sanitize";
 import { ProductsToolbar } from "./ProductsToolbar";
 import { PageHeader } from "@/components/PageHeader";
 import { useTutorial } from "@/hooks/useTutorial";
 import { TutorialOverlay, type TutorialStep } from "@/components/Tutorial/TutorialOverlay";
 import styles from "./products.module.css";
 
-// Inline name editor for "ناقص معلومات" products (auto-generated name "منتج-[barcode]")
-function IncompleteRow({
-  row,
-  merchantId,
-  labels,
-  currency,
-}: {
-  row: LocalProduct;
-  merchantId: string;
-  labels: Dictionary["products"]["incomplete"];
-  currency: string;
-}) {
-  const [name, setName] = useState(row.name);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const nfLocal = new Intl.NumberFormat("en-US");
-
-  async function handleSave() {
-    if (!name.trim() || saving) return;
-    setSaving(true);
-    try {
-      await saveProduct({
-        mode: "edit",
-        merchantId,
-        base: row,
-        data: {
-          name: name.trim(),
-          name_en: row.name_en ?? undefined,
-          barcode: row.barcode ?? undefined,
-          category: row.category ?? undefined,
-          cost_price: Number(row.cost_price),
-          sell_price: Number(row.sell_price),
-          stock: Number(row.stock),
-          min_stock: Number(row.min_stock),
-          unit: (row.unit as "meter" | "piece" | "kg" | "liter" | "box" | "carton" | "dozen" | undefined) ?? undefined,
-          notes: row.notes ?? undefined,
-          custom_fields: row.custom_fields,
-        },
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div style={{
-      background: "#fff",
-      border: "1px solid #e2e8f0",
-      borderRadius: "0.75rem",
-      padding: "0.75rem 1rem",
-      display: "flex",
-      flexDirection: "column",
-      gap: "0.5rem",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.78rem", color: "#444651" }}>
-        {row.barcode && <span style={{ fontFamily: "monospace", background: "#f2f3ff", padding: "1px 6px", borderRadius: "4px" }}>{safeDisplay(row.barcode)}</span>}
-        <span>{nfLocal.format(Number(row.sell_price))} {currency}</span>
-        <span>مخزون: {nfLocal.format(Number(row.stock))}</span>
-      </div>
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-        <input
-          style={{
-            flex: 1, font: "inherit", fontSize: "0.95rem", fontWeight: 600,
-            color: "#131b2e", background: "#faf8ff",
-            border: "1.5px solid #c5c5d3", borderRadius: "0.5rem",
-            padding: "0.5rem 0.7rem",
-          }}
-          value={name}
-          onChange={(e) => { setName(e.target.value); setSaved(false); }}
-          placeholder={labels.namePlaceholder}
-          onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); }}
-        />
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={saving || !name.trim()}
-          style={{
-            appearance: "none", border: "none",
-            background: saved ? "#16a34a" : "#1e3a8a",
-            color: "#fff", font: "inherit", fontWeight: 700,
-            fontSize: "0.85rem", padding: "0.5rem 0.9rem",
-            borderRadius: "0.5rem", cursor: "pointer",
-            opacity: saving || !name.trim() ? 0.6 : 1,
-            whiteSpace: "nowrap", minWidth: "56px",
-            transition: "background 0.2s",
-          }}
-        >
-          {saving ? labels.saving : saved ? labels.saved : labels.save}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 const PRODUCTS_STEPS: TutorialStep[] = [
   { target: "#search-products", title_ar: "البحث", text_ar: "ابحث عن أي منتج بالاسم أو الباركود", position: "bottom" },
@@ -343,7 +246,7 @@ export function ProductsView({
       {loading ? (
         <p className={styles.count}>{common.loading}</p>
       ) : incompleteMode ? (
-        /* ── Incomplete products: inline name edit ── */
+        /* ── Incomplete products: tap → go to edit page ── */
         incompleteProducts.length === 0 ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>{p.empty}</p>
@@ -352,12 +255,21 @@ export function ProductsView({
           <ul className={styles.list} id="product-list">
             {incompleteProducts.map((row) => (
               <li key={row.id}>
-                <IncompleteRow
-                  row={row}
-                  merchantId={merchantId}
-                  labels={p.incomplete}
-                  currency={currency}
-                />
+                <Link href={`/products/${row.id}/edit`} className={styles.incompleteRow}>
+                  <div className={styles.incompleteInfo}>
+                    <span className={styles.incompleteName}>
+                      {safeDisplay(shortProductName(row.name))}
+                    </span>
+                    <span className={styles.incompleteMeta}>
+                      {nf.format(Number(row.sell_price))} {currency}
+                      {" · "}
+                      {nf.format(Number(row.stock))} {"متوفر"}
+                    </span>
+                  </div>
+                  <span className={styles.incompleteBtn}>
+                    {p.incomplete.completeData}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -377,9 +289,9 @@ export function ProductsView({
 
           <ul className={styles.list} id="product-list">
             {rows.map((row) => {
-              const name =
-                locale === "en" && row.name_en ? row.name_en : row.name;
-              const secondary = locale === "en" ? row.name : row.name_en;
+              const rawName = locale === "en" && row.name_en ? row.name_en : row.name;
+              const name = shortProductName(rawName);
+              const secondary = locale === "en" ? shortProductName(row.name) : row.name_en;
               const stock = Number(row.stock);
               const minStock = Number(row.min_stock);
               const out = stock <= 0;
