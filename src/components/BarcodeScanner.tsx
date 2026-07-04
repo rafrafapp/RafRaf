@@ -7,6 +7,11 @@ import Quagga, {
   type QuaggaJSCodeReader,
 } from "@ericblade/quagga2";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import {
+  nativeScannerSupported,
+  startNativeScanner,
+  type NativeScanHandle,
+} from "@/lib/scanner/native";
 import styles from "./BarcodeScanner.module.css";
 
 type Props = {
@@ -85,6 +90,8 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
   // the real stream via applyConstraints, and only expose the control when the
   // camera reports a real `zoom` capability.
   const trackRef = useRef<MediaStreamTrack | null>(null);
+  const nativeRef = useRef<NativeScanHandle | null>(null);
+  const nativeVideoRef = useRef<HTMLVideoElement | null>(null);
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [zoomRange, setZoomRange] = useState<ZoomRange | null>(null);
@@ -168,6 +175,8 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
     if (doneRef.current) return;
     doneRef.current = true;
     successFeedback();
+    nativeRef.current?.stop();
+    nativeRef.current = null;
     try {
       Quagga.stop();
     } catch {
@@ -176,56 +185,37 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
     onDetectedRef.current(code);
   }, []);
 
-  // Live camera scanning (QuaggaJS, 1D). Auto-starts on mount and auto-reads.
+  // Live camera scanning. Engine order:
+  //   1. Native BarcodeDetector (Chrome/Android) — 1080p, hardware decode, ALL
+  //      formats incl. QR live. Fixes the blurry/unreliable reads.
+  //   2. QuaggaJS 1D pipeline — iOS Safari / Firefox / older WebViews.
   useEffect(() => {
     doneRef.current = false;
     const target = viewportRef.current;
     if (!target) return;
+    let native: NativeScanHandle | null = null;
+    let quaggaStarted = false;
+    let quaggaListener: ((r: QuaggaJSResultObject) => void) | null = null;
 
-    const onResult = (result: QuaggaJSResultObject) => {
-      const code = result?.codeResult?.code;
-      if (!code) return;
+    // Shared delivery: continuous mode dedups repeats, one-shot finishes.
+    const deliver = (raw: string) => {
+      const code = String(raw);
       if (continuous) {
         const now = Date.now();
         const last = lastScanRef.current;
-        if (last && last.code === String(code) && now - last.at < 1500) return;
-        lastScanRef.current = { code: String(code), at: now };
+        if (last && last.code === code && now - last.at < 1500) return;
+        lastScanRef.current = { code, at: now };
         successFeedback();
-        onDetectedRef.current(String(code));
+        onDetectedRef.current(code);
       } else {
-        finish(String(code));
+        finish(code);
       }
     };
 
-    const config: QuaggaJSConfigObject = {
-      inputStream: {
-        type: "LiveStream",
-        target,
-        // A decent capture resolution so 1D bars have enough pixels to decode.
-        constraints: {
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      },
-      locator: { patchSize: "medium", halfSample: true },
-      numOfWorkers: 0, // main thread — no blob-worker lifecycle to clean up
-      frequency: 10,
-      decoder: { readers: READERS },
-      locate: true,
-    };
-
-    // Quagga injects its <video> asynchronously; poll briefly for the stream
-    // track, then enable zoom (hardware where available, 1.5× to start).
-    const setupZoom = (attempt: number) => {
-      if (doneRef.current) return;
-      const video = target.querySelector("video") as HTMLVideoElement | null;
-      const stream = (video?.srcObject ?? null) as MediaStream | null;
-      const track = stream?.getVideoTracks?.()[0] ?? null;
-      if (!track) {
-        if (attempt < 20) setTimeout(() => setupZoom(attempt + 1), 150);
-        return;
-      }
+    // Once a live track exists (either engine): continuous AF + expose the
+    // torch / hardware-zoom controls the camera actually supports.
+    const adoptTrack = (track: MediaStreamTrack | null) => {
+      if (!track || doneRef.current) return;
       trackRef.current = track;
       const caps = track.getCapabilities?.() as ExtCaps | undefined;
       // Continuous autofocus keeps close-up barcodes sharp (fixes blurry scans
@@ -254,32 +244,103 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
       }
     };
 
-    Quagga.init(config, (err) => {
-      if (err) {
-        setError(true);
-        return;
+    const startQuagga = () => {
+      if (doneRef.current) return;
+      quaggaStarted = true;
+      const onResult = (result: QuaggaJSResultObject) => {
+        const code = result?.codeResult?.code;
+        if (code) deliver(String(code));
+      };
+      quaggaListener = onResult;
+
+      const config: QuaggaJSConfigObject = {
+        inputStream: {
+          type: "LiveStream",
+          target,
+          // A decent capture resolution so 1D bars have enough pixels to decode.
+          constraints: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        },
+        locator: { patchSize: "medium", halfSample: true },
+        numOfWorkers: 0, // main thread — no blob-worker lifecycle to clean up
+        frequency: 10,
+        decoder: { readers: READERS },
+        locate: true,
+      };
+
+      // Quagga injects its <video> asynchronously; poll briefly for the track.
+      const findTrack = (attempt: number) => {
+        if (doneRef.current) return;
+        const video = target.querySelector("video") as HTMLVideoElement | null;
+        const stream = (video?.srcObject ?? null) as MediaStream | null;
+        const track = stream?.getVideoTracks?.()[0] ?? null;
+        if (!track) {
+          if (attempt < 20) setTimeout(() => findTrack(attempt + 1), 150);
+          return;
+        }
+        adoptTrack(track);
+      };
+
+      Quagga.init(config, (err) => {
+        if (err) {
+          setError(true);
+          return;
+        }
+        if (doneRef.current) return; // unmounted before init resolved
+        Quagga.start();
+        findTrack(0);
+      });
+      Quagga.onDetected(onResult);
+    };
+
+    (async () => {
+      if (await nativeScannerSupported()) {
+        const video = nativeVideoRef.current;
+        if (video && !doneRef.current) {
+          try {
+            const handle = await startNativeScanner({
+              video,
+              onCode: (text) => deliver(text),
+            });
+            if (doneRef.current) {
+              handle.stop();
+              return;
+            }
+            native = handle;
+            nativeRef.current = handle;
+            video.style.display = "block";
+            adoptTrack(handle.track);
+            return;
+          } catch {
+            // Native stream failed (busy camera, interrupted play) → Quagga.
+          }
+        }
       }
-      if (doneRef.current) return; // unmounted before init resolved
-      Quagga.start();
-      setupZoom(0);
-    });
-    Quagga.onDetected(onResult);
+      startQuagga();
+    })();
 
     return () => {
       doneRef.current = true;
       if (refocusTimer.current) clearTimeout(refocusTimer.current);
-      try {
-        Quagga.offDetected(onResult);
-      } catch {
-        /* ignore */
-      }
-      try {
-        Quagga.stop();
-      } catch {
-        /* ignore */
+      native?.stop();
+      nativeRef.current = null;
+      if (quaggaStarted) {
+        try {
+          if (quaggaListener) Quagga.offDetected(quaggaListener);
+        } catch {
+          /* ignore */
+        }
+        try {
+          Quagga.stop();
+        } catch {
+          /* ignore */
+        }
       }
     };
-  }, [finish]);
+  }, [finish, continuous]);
 
   // Escape closes the scanner for keyboard users.
   useEffect(() => {
@@ -331,6 +392,13 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
             onTouchEnd={onTouchEnd}
             onPointerDown={onTapFocus}
           >
+            {/* Native-engine video (hidden while Quagga owns the viewport). */}
+            <video
+              ref={nativeVideoRef}
+              playsInline
+              muted
+              style={{ display: "none" }}
+            />
             <div className={styles.frame} aria-hidden="true" />
             <div className={styles.laser} aria-hidden="true" />
             {torchSupported && (
