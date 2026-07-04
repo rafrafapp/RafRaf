@@ -96,6 +96,8 @@ export function SellView({
   const [newPrice, setNewPrice] = useState("");
   const [newQty, setNewQty] = useState("1");
   const [newName, setNewName] = useState("");
+  // Manual quick-add (no barcode) — opened from the empty search-results state.
+  const [manualAdd, setManualAdd] = useState(false);
   const [savingNew, setSavingNew] = useState(false);
 
   // ── New barcodes batch (Telegram at end of sale) ──
@@ -229,14 +231,26 @@ export function SellView({
 
   function closeUnknownSheet() {
     setUnknownBarcode(null);
+    setManualAdd(false);
     if (scanAfterSheet) {
       setScanAfterSheet(false);
       setScanning(true);
     }
   }
 
+  // Quick-add from the empty search state: same modal, no barcode, name required.
+  function openManualAdd() {
+    setUnknownBarcode(null);
+    setManualAdd(true);
+    setNewPrice("");
+    setNewQty("1");
+    setNewName(q.trim());
+  }
+
   async function saveNewProduct() {
-    if (!unknownBarcode || !newPrice || savingNew) return;
+    if ((!unknownBarcode && !manualAdd) || !newPrice || savingNew) return;
+    // Without a barcode there is no auto-name fallback — the name is required.
+    if (!unknownBarcode && !newName.trim()) return;
     const price = parseFloat(newPrice);
     const qty = parseInt(newQty) || 1;
     if (!price || price <= 0) return;
@@ -248,7 +262,7 @@ export function SellView({
         data: {
           name: newName.trim() || `منتج-${unknownBarcode}`,
           name_en: undefined,
-          barcode: unknownBarcode,
+          barcode: unknownBarcode ?? undefined,
           category: undefined,
           cost_price: 0,
           sell_price: price,
@@ -286,8 +300,12 @@ export function SellView({
         _base_updated_at: null,
       };
       doAdd(newProduct);
-      setNewBarcodeProducts((prev) => [...prev, unknownBarcode]);
+      if (unknownBarcode) {
+        setNewBarcodeProducts((prev) => [...prev, unknownBarcode]);
+      }
       setUnknownBarcode(null);
+      setManualAdd(false);
+      setQ("");
       if (scanAfterSheet) {
         setScanAfterSheet(false);
         setScanning(true);
@@ -617,9 +635,18 @@ export function SellView({
           <div className={styles.productsList}>
             {filteredProducts.length === 0 ? (
               <div className={styles.productsEmpty}>
-                {products.length === 0
-                  ? "لا يوجد منتجات — أضف منتجات من قسم المنتجات"
-                  : `لا نتائج لـ "${q}"`}
+                <p className={styles.productsEmptyText}>
+                  {products.length === 0
+                    ? "لا يوجد منتجات بعد"
+                    : `لا نتائج لـ "${q}"`}
+                </p>
+                <button
+                  type="button"
+                  className={styles.quickAddBtn}
+                  onClick={openManualAdd}
+                >
+                  + {q.trim() ? `أضف "${q.trim()}" كمنتج جديد` : "أضف منتجاً جديداً"}
+                </button>
               </div>
             ) : (
               filteredProducts.map((p) => {
@@ -697,8 +724,8 @@ export function SellView({
         </button>
       </div>
 
-      {/* ── UNKNOWN BARCODE CENTERED MODAL ── */}
-      {unknownBarcode && (
+      {/* ── NEW PRODUCT CENTERED MODAL (scanned unknown barcode OR manual) ── */}
+      {(unknownBarcode || manualAdd) && (
         <div
           className={styles.ubOverlay}
           onClick={(e) => { if (e.target === e.currentTarget) closeUnknownSheet(); }}
@@ -718,7 +745,9 @@ export function SellView({
             </button>
 
             <h2 className={styles.ubTitle}>{ub?.title ?? "منتج جديد 🆕"}</h2>
-            <span className={styles.ubBarcode}>{unknownBarcode}</span>
+            {unknownBarcode && (
+              <span className={styles.ubBarcode}>{unknownBarcode}</span>
+            )}
 
             {/* سعر البيع */}
             <label className={styles.fieldLabel}>
@@ -753,13 +782,19 @@ export function SellView({
               />
             </label>
 
-            {/* اسم المنتج (اختياري) */}
+            {/* اسم المنتج — اختياري مع باركود، إجباري بدونه */}
             <label className={styles.fieldLabel}>
-              {ub?.nameLabel ?? "اسم المنتج (اختياري)"}
+              {unknownBarcode
+                ? (ub?.nameLabel ?? "اسم المنتج (اختياري)")
+                : "اسم المنتج *"}
               <input
                 className={styles.input}
                 type="text"
-                placeholder={ub?.namePlaceholder ?? "يُملأ لاحقاً إن تُرك فارغاً"}
+                placeholder={
+                  unknownBarcode
+                    ? (ub?.namePlaceholder ?? "يُملأ لاحقاً إن تُرك فارغاً")
+                    : ""
+                }
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void saveNewProduct(); }}
@@ -770,7 +805,9 @@ export function SellView({
               type="button"
               className={styles.ubSaveBtn}
               onClick={() => void saveNewProduct()}
-              disabled={savingNew || !newPrice}
+              disabled={
+                savingNew || !newPrice || (!unknownBarcode && !newName.trim())
+              }
             >
               {savingNew
                 ? <><Spinner />{ub?.saving ?? "جارٍ..."}</>
