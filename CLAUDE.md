@@ -126,6 +126,19 @@ admin dashboard · public API `/api/v1` (verified) · AI stub (smart-plan gated)
   (InlineScanner already had them). `robots.ts`/`sitemap.ts` (marketing-only; admin path not
   leaked; both excluded from middleware matcher). BottomNav hides on `/sell` BY DESIGN
   (fullscreen POS with own footer).
+- **Takeover session (2026-07-04, cont.):** (1) **Scanner rebuilt native-first** —
+  `lib/scanner/native.ts`: BarcodeDetector (1080p + continuous AF + all formats incl. live QR,
+  Chrome/Android hardware decode) with the QuaggaJS 1D pipeline as automatic fallback
+  (iOS/Firefox); both `components/BarcodeScanner` (modal, keeps zoom/torch/tap-focus/upload)
+  and `app/sell/InlineScanner` (torch prop). `types/barcode-detector.d.ts` supplies the typings.
+  (2) **Sell manual quick-add**: empty search results → dashed CTA opens the new-product modal
+  without barcode (name becomes required, prefilled from the query). (3) **InstallPrompt**
+  banner (root layout): `beforeinstallprompt`, shows from 3rd visit (localStorage count,
+  per-session dedup), dismiss persists forever, hidden on admin. (4) **/upgrade** page:
+  3 static plans + "activation is manual via Telegram" contact card; entry card in Settings;
+  added (with /notifications) to middleware PROTECTED_PREFIXES. (5) Forgot-password success now
+  shows a Telegram manual-reset fallback (`forgotPassword.supportHint/supportCta`).
+  (6) Dashboard header shows "بانتظار المزامنة: N" in the date slot when offline ops are pending.
 - **Redis cache** (`lib/cache/redis.ts`, fail-open): `business_types` (1h) + `merchant:{id}` (5m),
   invalidated by their writers. Dashboard stats + low-stock are client-side (Dexie); plans are static
   constants — neither has a server query to cache.
