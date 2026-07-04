@@ -137,6 +137,30 @@
   color: #fff;
 }
 
+/* Torch (flashlight) toggle — top corner of the camera view. 44px tap target. */
+.torchBtn {
+  position: absolute;
+  top: 0.6rem;
+  inset-inline-end: 0.6rem;
+  z-index: 4;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.torchOn {
+  background: #f59e0b;
+  color: #1a1204;
+}
+
 .hint {
   margin: 0;
   font-size: 0.85rem;

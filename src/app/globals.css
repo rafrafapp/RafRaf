@@ -1,29 +1,21 @@
 :root {
-  /* Brand */
-  --brand: #0e7c66;
+  /* Brand — light/blue "banking" theme (see CLAUDE.md design tokens) */
+  --brand: #1e3a8a;
   --brand-contrast: #ffffff;
+  --accent: #2563eb;
+  --danger: #dc2626;
 
   /* Surfaces & text */
-  --bg: #f7f8f7;
+  --bg: #faf8ff;
   --surface: #ffffff;
-  --text: #15201c;
-  --text-muted: #5b6b65;
-  --border: #e2e8e5;
+  --surface-low: #f8faff;
+  --text: #131b2e;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
 
-  /* Type */
-  --font-sans: "Segoe UI", "Tahoma", "Noto Sans Arabic", "Cairo", system-ui,
-    -apple-system, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1411;
-    --surface: #15201c;
-    --text: #eef3f1;
-    --text-muted: #9bb0a8;
-    --border: #243530;
-    --brand-contrast: #ffffff;
-  }
+  /* Type — --font-plex is injected by next/font in the root layout */
+  --font-sans: var(--font-plex, "IBM Plex Sans Arabic"), "Segoe UI", "Tahoma",
+    "Noto Sans Arabic", system-ui, -apple-system, sans-serif;
 }
 
 * {

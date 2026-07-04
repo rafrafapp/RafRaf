@@ -88,6 +88,51 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [zoomRange, setZoomRange] = useState<ZoomRange | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const refocusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Extended capabilities/constraints not yet in the TS lib types.
+  type ExtCaps = MediaTrackCapabilities & {
+    zoom?: ZoomRange;
+    torch?: boolean;
+    focusMode?: string[];
+    pointsOfInterest?: unknown;
+  };
+  const applyAdvanced = useCallback((c: Record<string, unknown>) => {
+    trackRef.current
+      ?.applyConstraints({ advanced: [c] } as unknown as MediaTrackConstraints)
+      .catch(() => {});
+  }, []);
+
+  function toggleTorch() {
+    const next = !torchOn;
+    setTorchOn(next);
+    applyAdvanced({ torch: next });
+  }
+
+  // Tap-to-focus: point the camera's focus at the tapped spot (where supported),
+  // then fall back to continuous AF a moment later so it keeps tracking.
+  function onTapFocus(e: React.PointerEvent) {
+    const track = trackRef.current;
+    if (!track) return;
+    const caps = track.getCapabilities?.() as ExtCaps | undefined;
+    if (!caps?.focusMode?.length) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    if ("pointsOfInterest" in caps) {
+      applyAdvanced({
+        focusMode: caps.focusMode.includes("single-shot") ? "single-shot" : caps.focusMode[0],
+        pointsOfInterest: [{ x, y }],
+      });
+    }
+    if (refocusTimer.current) clearTimeout(refocusTimer.current);
+    refocusTimer.current = setTimeout(() => {
+      if (caps.focusMode?.includes("continuous"))
+        applyAdvanced({ focusMode: "continuous" });
+    }, 2500);
+  }
 
   function applyZoom(z: number) {
     const r = zoomRange;
@@ -182,9 +227,17 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
         return;
       }
       trackRef.current = track;
-      const caps = track.getCapabilities?.() as
-        | (MediaTrackCapabilities & { zoom?: ZoomRange })
-        | undefined;
+      const caps = track.getCapabilities?.() as ExtCaps | undefined;
+      // Continuous autofocus keeps close-up barcodes sharp (fixes blurry scans
+      // on devices that default to a fixed/normal focus mode).
+      if (caps?.focusMode?.includes("continuous")) {
+        track
+          .applyConstraints({
+            advanced: [{ focusMode: "continuous" }],
+          } as unknown as MediaTrackConstraints)
+          .catch(() => {});
+      }
+      if (caps?.torch) setTorchSupported(true);
       // Only offer zoom when the camera supports it for real. A modest 1.5×
       // start helps read small barcodes; if unsupported we leave the stream at
       // 1× and hide the control (no CSS fake-zoom, which would break decoding).
@@ -214,6 +267,7 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
 
     return () => {
       doneRef.current = true;
+      if (refocusTimer.current) clearTimeout(refocusTimer.current);
       try {
         Quagga.offDetected(onResult);
       } catch {
@@ -275,9 +329,36 @@ export function BarcodeScanner({ onDetected, onClose, continuous = false, labels
             ref={viewportRef}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
+            onPointerDown={onTapFocus}
           >
             <div className={styles.frame} aria-hidden="true" />
             <div className={styles.laser} aria-hidden="true" />
+            {torchSupported && (
+              <button
+                type="button"
+                className={`${styles.torchBtn} ${torchOn ? styles.torchOn : ""}`}
+                aria-label="🔦"
+                aria-pressed={torchOn}
+                onClick={toggleTorch}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  {/* flashlight */}
+                  <path d="M18 6c0 2-2 3-2 3v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V9S6 8 6 6V2h12v4z" />
+                  <line x1="6" y1="6" x2="18" y2="6" />
+                  <circle cx="12" cy="14" r="1.5" />
+                </svg>
+              </button>
+            )}
             {zoomRange && (
               <div className={styles.zoomControls}>
                 <button

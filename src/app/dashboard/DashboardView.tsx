@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Locale } from "@/i18n/config";
@@ -210,13 +210,20 @@ export function DashboardView({
   }, [txns]);
 
   // Western-digit, Arabic-word date + relative time (locale "ar-u-nu-latn").
+  // Computed after mount: the server clock/timezone/ICU can differ from the
+  // device's, and rendering it during SSR causes hydration mismatches (#418).
   const numLocale = locale === "ar" ? "ar-u-nu-latn" : "en-GB";
-  const dateStr = new Date().toLocaleDateString(numLocale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const [dateStr, setDateStr] = useState("");
+  useEffect(() => {
+    setDateStr(
+      new Date().toLocaleDateString(numLocale, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    );
+  }, [numLocale]);
   const rtf = useMemo(
     () =>
       new Intl.RelativeTimeFormat(locale === "ar" ? "ar-u-nu-latn" : "en", {

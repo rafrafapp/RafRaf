@@ -179,7 +179,7 @@ export function ReportsView({
     try {
       const dir = locale === "ar" ? "rtl" : "ltr";
       const th = (txt: string, span = 1) =>
-        `<td colspan="${span}" style="background:#0e7c66;color:#fff;font-weight:700;padding:8px 10px;border:1px solid #0b5f4e;">${escapeHtml(txt)}</td>`;
+        `<td colspan="${span}" style="background:#1e3a8a;color:#fff;font-weight:700;padding:8px 10px;border:1px solid #16295e;">${escapeHtml(txt)}</td>`;
       const sec = (txt: string, span = 2) =>
         `<tr><td colspan="${span}" style="background:#1f2937;color:#fff;font-weight:700;padding:7px 10px;">${escapeHtml(txt)}</td></tr>`;
       const cell = (txt: string, i: number, num = false) =>
@@ -284,23 +284,23 @@ export function ReportsView({
     const h = escapeHtml(r.reportHeading.replace("{store}", sanitizeString(storeName)));
     return (
       `<div dir="${dir}" style="font-family:'Segoe UI','Noto Sans Arabic',Arial,sans-serif;color:#111827;">` +
-      `<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0e7c66;padding-bottom:10px;margin-bottom:16px;">` +
-      `<div><div style="font-size:24px;font-weight:800;color:#0e7c66;">رف رف — RafRaf</div>` +
+      `<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a8a;padding-bottom:10px;margin-bottom:16px;">` +
+      `<div><div style="font-size:24px;font-weight:800;color:#1e3a8a;">رف رف — RafRaf</div>` +
       `<div style="font-size:15px;font-weight:700;margin-top:2px;">${h}</div>` +
       `<div style="color:#6b7280;font-size:13px;">${escapeHtml(rangeText)}</div></div></div>` +
-      `<h2 style="font-size:15px;margin:14px 0 6px;color:#0e7c66;">${escapeHtml(r.title)}</h2>` +
+      `<h2 style="font-size:15px;margin:14px 0 6px;color:#1e3a8a;">${escapeHtml(r.title)}</h2>` +
       `<table style="width:100%;border-collapse:collapse;font-size:13px;">${sumRows}</table>` +
       (showCurrencies
-        ? `<h2 style="font-size:15px;margin:18px 0 6px;color:#0e7c66;">${escapeHtml(r.sections.byCurrency)}</h2>` +
+        ? `<h2 style="font-size:15px;margin:18px 0 6px;color:#1e3a8a;">${escapeHtml(r.sections.byCurrency)}</h2>` +
           `<table style="width:100%;border-collapse:collapse;font-size:13px;">${currencyRows}` +
           `<tr><td><strong>${escapeHtml(r.grandTotalSyp)}</strong></td><td class="n"><strong>${nf.format(report.sales)} ${escapeHtml(baseSym)}</strong></td></tr></table>`
         : "") +
       (sellerRows
-        ? `<h2 style="font-size:15px;margin:18px 0 6px;color:#0e7c66;">${escapeHtml(r.sections.topSellers)}</h2>` +
+        ? `<h2 style="font-size:15px;margin:18px 0 6px;color:#1e3a8a;">${escapeHtml(r.sections.topSellers)}</h2>` +
           `<table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><th>${escapeHtml(r.metric)}</th><th class="n">${escapeHtml(r.qty)}</th><th class="n">${escapeHtml(r.revenue)}</th></tr>${sellerRows}</table>`
         : "") +
       (expenseRows
-        ? `<h2 style="font-size:15px;margin:18px 0 6px;color:#0e7c66;">${escapeHtml(r.sections.expenses)}</h2>` +
+        ? `<h2 style="font-size:15px;margin:18px 0 6px;color:#1e3a8a;">${escapeHtml(r.sections.expenses)}</h2>` +
           `<table style="width:100%;border-collapse:collapse;font-size:13px;">${expenseRows}</table>`
         : "") +
       `<div style="margin-top:24px;color:#9ca3af;font-size:11px;text-align:center;">رف رف — الرف الرقمي لكل تاجر</div>` +

@@ -69,7 +69,8 @@ errors (only real 401/403 logs out).
   chain** except its two raw-HTML sinks (`components/Receipt`, `app/reports/ReportsView`) — jsdom
   crashes the Edge runtime AND the Vercel server bundle. Use regex-only `sanitize.ts` (`sanitizeText`/
   `safeDisplay`/`escapeHtml`) everywhere else. Build check: `grep -rl jsdom .next/server/app` must
-  list ONLY `sell/page.js` + `reports/page.js`.
+  list ONLY the Receipt/reports sink pages (`sell`, `reports`, `transactions/[id]` — `.nft.json`
+  traces only, never other pages' `page.js`).
 - **New ledger type → add in BOTH** the `transactions_type_check` CHECK **and** the RPC's
   `p_type NOT IN (...)` guard.
 - **Service account = 0 Drive storage** (consumer): can't create sheets, only edit shared ones.
@@ -116,6 +117,15 @@ admin dashboard · public API `/api/v1` (verified) · AI stub (smart-plan gated)
   `merchants.google_sheet_id`); backups overview gains a Sheet-ID column + failed-only filter; merchant
   Settings backup card (status + last-run + request-via-Telegram → admin); nightly cron skips unlinked
   merchants and sends the admin a daily digest. No migration (column reused).
+- **Full audit pass (2026-07-04):** navy rebrand completed end-to-end — `globals.css` tokens
+  (old green `#0e7c66` → `#1E3A8A` palette), icon.svg, manifest theme/PNG icons (sharp-generated,
+  incl. maskable + apple-touch), `src/app/favicon.ico` (PNG-in-ICO 16/32/48), report-PDF header.
+  IBM Plex Sans Arabic now loaded in the ROOT layout via `next/font` (`--font-plex`; was
+  marketing-only, so the app font never actually loaded). Dashboard date computed post-mount
+  (hydration #418). Scanner: continuous AF + tap-to-focus + torch in shared `BarcodeScanner`
+  (InlineScanner already had them). `robots.ts`/`sitemap.ts` (marketing-only; admin path not
+  leaked; both excluded from middleware matcher). BottomNav hides on `/sell` BY DESIGN
+  (fullscreen POS with own footer).
 - **Redis cache** (`lib/cache/redis.ts`, fail-open): `business_types` (1h) + `merchant:{id}` (5m),
   invalidated by their writers. Dashboard stats + low-stock are client-side (Dexie); plans are static
   constants — neither has a server query to cache.
