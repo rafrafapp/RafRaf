@@ -27,6 +27,8 @@ const PROTECTED_PREFIXES = [
   "/ai",
   "/mobile-credit",
   "/sham-cash",
+  "/notifications",
+  "/upgrade",
 ];
 
 function clientIp(request: NextRequest): string {

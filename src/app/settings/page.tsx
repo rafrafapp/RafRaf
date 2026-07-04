@@ -68,6 +68,38 @@ export default async function SettingsPage() {
         />
       </div>
 
+      {/* Current plan + upgrade entry point */}
+      <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
+        <h1 className={styles.title}>{dict.upgrade.title}</h1>
+        <p className={styles.muted}>
+          {dict.upgrade.currentPlan}:{" "}
+          <strong>
+            {dict.upgrade.plans[
+              (["free", "basic", "smart"].includes(merchant.plan)
+                ? merchant.plan
+                : "free") as "free" | "basic" | "smart"
+            ].name}
+          </strong>
+        </p>
+        <Link
+          href="/upgrade"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 44,
+            padding: "0.5rem 1.1rem",
+            borderRadius: 10,
+            background: "var(--brand)",
+            color: "#fff",
+            fontWeight: 700,
+            textDecoration: "none",
+          }}
+        >
+          {dict.upgrade.viewPlans}
+        </Link>
+      </div>
+
       <div className={styles.card} style={{ marginBlockStart: "1.25rem" }}>
         <h1 className={styles.title}>{dict.settings.currencies.title}</h1>
         <CurrenciesSection

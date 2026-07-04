@@ -720,6 +720,46 @@
       "noSales": "No sales in this period"
     }
   },
+  "upgrade": {
+    "title": "Plans & upgrade",
+    "subtitle": "Pick the plan that fits your store — activation is manual and fast.",
+    "currentPlan": "Your current plan",
+    "contactTitle": "How do I upgrade?",
+    "contactBody": "Payment and activation are manual: contact us on Telegram, pay via the agreed method, and your plan is activated within minutes.",
+    "contactCta": "Contact us on Telegram",
+    "priceOnRequest": "Price on request",
+    "free": "Free",
+    "viewPlans": "View plans & upgrade",
+    "plans": {
+      "free": {
+        "name": "Free",
+        "features": [
+          "Unlimited products and sales",
+          "Fully offline-capable",
+          "Customer & supplier debt ledger",
+          "Basic reports"
+        ]
+      },
+      "basic": {
+        "name": "Basic",
+        "features": [
+          "Everything in Free",
+          "Daily Google Sheets backup",
+          "Telegram alerts (daily summary + low stock)",
+          "Priority support"
+        ]
+      },
+      "smart": {
+        "name": "Smart",
+        "features": [
+          "Everything in Basic",
+          "AI assistant (reorder suggestions & forecasts)",
+          "Public API for integrations",
+          "Early access to new features"
+        ]
+      }
+    }
+  },
   "settings": {
     "title": "Settings",
     "subtitle": "Choose your store's preferred notification channel.",
