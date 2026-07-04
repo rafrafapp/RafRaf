@@ -113,6 +113,13 @@
   color: var(--on-surface-variant);
   white-space: nowrap;
 }
+/* Pending-sync counter — same slot as .date, amber like the pending dot. */
+.pendingText {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #b45309;
+  white-space: nowrap;
+}
 .topActions {
   display: flex;
   align-items: center;

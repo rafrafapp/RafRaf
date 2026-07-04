@@ -48,10 +48,28 @@ export function ForgotPasswordForm({
   }
 
   if (done) {
+    const botUser = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
     return (
       <div>
         <p className={styles.notice} role="status">
           {labels.success}
+        </p>
+        {/* Email delivery can fail silently (e.g. unverified Resend domain) —
+            always offer the manual Telegram escape hatch. */}
+        <p className={styles.hint}>
+          {labels.supportHint}
+          {botUser && (
+            <>
+              {" "}
+              <a
+                href={`https://t.me/${botUser}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {labels.supportCta}
+              </a>
+            </>
+          )}
         </p>
         <Link href="/login" className={styles.backLink}>
           {labels.backToLogin}

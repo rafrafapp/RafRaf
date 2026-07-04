@@ -275,7 +275,14 @@ export function DashboardView({
           </span>
           <span className={styles.brandText}>
             <span className={styles.storeName}>{safeDisplay(storeName)}</span>
-            <span className={styles.date} suppressHydrationWarning>{dateStr}</span>
+            {/* Pending offline ops take over the date slot (matches the orange dot). */}
+            {pending > 0 ? (
+              <span className={styles.pendingText} role="status">
+                {sync.pending.replace("{n}", nf.format(pending))}
+              </span>
+            ) : (
+              <span className={styles.date} suppressHydrationWarning>{dateStr}</span>
+            )}
           </span>
         </Link>
         <div className={styles.topActions}>

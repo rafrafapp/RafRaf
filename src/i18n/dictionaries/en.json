@@ -21,6 +21,11 @@
   "offlineBanner": {
     "text": "You are offline — your data is saved locally"
   },
+  "installPrompt": {
+    "text": "Add RafRaf to your home screen — works offline",
+    "install": "Install",
+    "dismiss": "Dismiss"
+  },
   "home": {
     "heading": "Welcome to RafRaf",
     "subheading": "A smart, secure, offline-ready inventory system — the replacement for the notebook and Excel.",
@@ -74,7 +79,9 @@
     "submitting": "Sending…",
     "success": "If an account exists for that email, we've sent it a reset link. Check your inbox (and spam folder).",
     "invalidEmail": "Enter a valid email address.",
-    "backToLogin": "Back to sign in"
+    "backToLogin": "Back to sign in",
+    "supportHint": "Didn't get the email within a few minutes? Contact us on Telegram to reset your password manually.",
+    "supportCta": "Contact us on Telegram"
   },
   "resetPassword": {
     "title": "Set a new password",

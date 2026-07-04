@@ -1,0 +1,71 @@
+/* Install-to-home-screen banner — floats above the bottom nav. */
+.banner {
+  position: fixed;
+  inset-inline: 12px;
+  inset-block-end: calc(72px + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  background: #1e3a8a;
+  color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
+  font-family: var(--font-sans);
+  animation: installIn 0.25s ease;
+}
+
+@keyframes installIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.icon {
+  flex: 0 0 auto;
+}
+
+.text {
+  flex: 1;
+  min-inline-size: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.installBtn {
+  appearance: none;
+  border: none;
+  background: #ffffff;
+  color: #1e3a8a;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  min-block-size: 40px;
+  padding: 0.35rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dismissBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1rem;
+  line-height: 1;
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: 999px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  -webkit-tap-highlight-color: transparent;
+}

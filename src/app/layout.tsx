@@ -7,6 +7,7 @@ import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { NumberInputGuard } from "@/components/NumberInputGuard";
 import { BottomNav } from "@/components/BottomNav";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import "./globals.css";
 
 // Self-hosted app font (CSP-safe — served from /_next/static, no external CDN).
@@ -82,6 +83,7 @@ export default async function RootLayout({
         <ServiceWorkerRegister />
         <NumberInputGuard />
         <OfflineBanner text={dict.offlineBanner.text} />
+        <InstallPrompt labels={dict.installPrompt} />
         <BottomNav labels={dict.dashboard.nav} />
       </body>
     </html>
